@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogTrack - Registro y Reportes de Actividad</title>
+    
+    <!-- Librerías Externas vía CDN para Gráficos y Exportaciones -->
+    <script src="https://jsdelivr.net"></script>
+    <script src="https://cloudflare.com"></script>
+    <script src="https://cloudflare.com"></script>
+    <script src="https://cloudflare.com"></script>
+
+    <style>
+        /* --- ESTILOS GENERALES Y PALETA DE AZULES Y BLANCO --- */
+        :root {
+            --bg-main: #ffffff;
+            --blue-dark: #003366;
+            --blue-medium: #0056b3;
+            --blue-light: #e6f0fa;
+            --blue-accent: #007bff;
+            --text-dark: #212529;
+            --text-muted: #6c757d;
+            --border-color: #dee2e6;
+            --danger: #dc3545;
+            --success: #28a745;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            border-bottom: 2px solid var(--blue-light);
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        header h1 {
+            color: var(--blue-dark);
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        /* --- CONTENEDORES Y TARJETAS (GRID & FLEX) --- */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        @media (min-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr 2fr;
+            }
+        }
+
+        .card {
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 51, 102, 0.05);
+        }
+
+        .card h2 {
+            color: var(--blue-dark);
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--blue-light);
+            padding-bottom: 8px;
+        }
+
+        /* --- FORMULARIOS --- */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--blue-dark);
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 10px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--blue-accent);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* --- BOTONES --- */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+            border: none;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background-color: var(--blue-medium);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--blue-dark);
+        }
+
+        .btn-primary:disabled {
+            background-color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--blue-medium);
+            color: var(--blue-medium);
+            width: auto;
+        }
+
+        .btn-outline:hover {
+            background-color: var(--blue-light);
+        }
+
+        /* --- SECCIÓN DE FILTROS --- */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+            margin-bottom: 25px;
+            background-color: var(--blue-light);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        /* --- TABLERO DE MÉTRICAS (KPIs) --- */
+        .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .kpi-card {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            background-color: var(--bg-main);
+        }
+
+        .kpi-card .kpi-title {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .kpi-card .kpi-value {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--blue-dark);
+        }
+
+        .kpi-card.discrepancy-neg .kpi-value { color: var(--danger); }
+        .kpi-card.discrepancy-pos .kpi-value { color: var(--success); }
+
+        /* --- TABLAS --- */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--blue-light);
+            color: var(--blue-dark);
+            font-weight: 600;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:nth-child(even) {
+            background-color: rgba(0, 51, 102, 0.01);
+        }
+
+        /* --- COMPONENTES AUXILIARES --- */
+        .disabled-overlay {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .actions-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>LogTrack // Sistema de Rendimiento y Ganancias</h1>
+        <div style="font-size: 0.9rem; color: var(--text-muted);" id="live-clock">Cargando contexto...</div>
+    </header>
+
+    <div class="dashboard-grid">
+        <!-- BLOQUE IZQUIERDO: FLUJO DE ENTRADA DE DATOS -->
+        <div class="card">
+            <h2>1. Selección de Fecha</h2>
+            <div class="form-group">
+                <label for="log-date">Fecha de Trabajo</label>
+                <input type="date" id="log-date" class="form-control">
+            </div>
+
+            <div id="form-container" class="disabled-overlay">
+                <h2>2. Registro de Actividad</h2>
+                <form id="activity-form">
+                    <div class="form-group">
+                        <label for="call-minutes">Minutos en Llamada (Entero)</label>
+                        <input type="number" id="call-minutes" class="form-control" min="0" required placeholder="Ej. 120">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="total-calls">Cantidad de Llamadas Tomadas</label>
+                        <input type="number" id="total-calls" class="form-control" min="0" required placeholder="Ej. 25">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="available-time">Tiempo Total Disponible en Línea</label>
+                        <div class="form-row">
+                            <input type="number" id="avail-hours" class="form-control" min="0" required placeholder="Horas">
+                            <input type="number" id="avail-mins" class="form-control" min="0" max="59" required placeholder="Minutos">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btn-save" class="btn btn-primary">Guardar Datos del Día</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- BLOQUE DERECHO: RENDIMIENTO Y GRÁFICOS -->
+        <div class="card">
+            <h2>Tendencias y Gráficos del Periodo</h2>
+            <div class="chart-wrapper">
+                <canvas id="trendsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN INTERACTIVA DE REPORTES -->
+    <div class="card" style="margin-bottom: 30px;">
+        <h2>3. Filtros del Sistema de Reportes</h2>
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label for="filter-type" style="font-size:0.85rem; font-weight:500; color:var(--blue-dark)">Periodo</label>
+                <select id="filter-type" class="form-control">
+                    <option value="all">Todo el Historial</option>
