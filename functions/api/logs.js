@@ -3,17 +3,16 @@ export async function onRequestPost(context) {
     const { request, env } = context;
     const body = await request.json();
 
-    // Validación básica
     if (!body.date) throw new Error("Falta la fecha");
 
-    // Lógica de Negocio: Calcular ganancias en el backend por seguridad
-    // Tarifa: $0.10 por minuto (llamada + disponible)
-    const tarifa = 0.10;
-    const totalMinutos = (parseInt(body.call_minutes) || 0) + (parseInt(body.available_minutes) || 0);
-    const gananciaEstimada = totalMinutos * tarifa;
+    const callMinutes = parseInt(body.call_minutes) || 0;
+    const totalCalls = parseInt(body.total_calls) || 0;
+    const availableMinutes = parseInt(body.available_minutes) || 0;
 
-    // UPSERT: Si existe la fecha actualiza, si no, inserta
-    // Usamos tus columnas: work_logs (date, call_minutes, total_calls, available_minutes, earnings_estimated)
+    // Lógica unificada: $0.10 por minuto de llamada + $0.10 por minuto disponible
+    const tarifa = 0.10;
+    const gananciaEstimada = (callMinutes + availableMinutes) * tarifa;
+
     const info = await env.DB.prepare(`
       INSERT INTO work_logs (date, call_minutes, total_calls, available_minutes, earnings_estimated)
       VALUES (?, ?, ?, ?, ?)
@@ -23,16 +22,25 @@ export async function onRequestPost(context) {
         available_minutes = excluded.available_minutes,
         earnings_estimated = excluded.earnings_estimated
     `).bind(
-      body.date, 
-      body.call_minutes, 
-      body.total_calls, 
-      body.available_minutes,
+      body.date,
+      callMinutes,
+      totalCalls,
+      availableMinutes,
       gananciaEstimada
     ).run();
 
-    return new Response(JSON.stringify({ success: true, saved: info }), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ 
+      success: true, 
+      earnings_estimated: gananciaEstimada 
+    }), { 
+      headers: { "Content-Type": "application/json" } 
+    });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+    console.error("Error en POST /api/logs:", e.message);
+    return new Response(JSON.stringify({ error: e.message }), { 
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 }
 
@@ -43,7 +51,7 @@ export async function onRequestGet(context) {
   const end = url.searchParams.get('end');
 
   try {
-    let query = "SELECT * FROM work_logs ORDER BY date DESC LIMIT 50";
+    let query = "SELECT * FROM work_logs ORDER BY date DESC LIMIT 100";
     let params = [];
 
     if (start && end) {
@@ -52,8 +60,15 @@ export async function onRequestGet(context) {
     }
 
     const { results } = await env.DB.prepare(query).bind(...params).all();
-    return new Response(JSON.stringify(results), { headers: { "Content-Type": "application/json" } });
+    
+    return new Response(JSON.stringify(results || []), { 
+      headers: { "Content-Type": "application/json" } 
+    });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+    console.error("Error en GET /api/logs:", e.message);
+    return new Response(JSON.stringify({ error: e.message }), { 
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 }
