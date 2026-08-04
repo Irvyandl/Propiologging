@@ -1,71 +1,175 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LogTrack - Panel de Trabajo</title>
-    <!-- Chart.js para gráficos -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- SheetJS para exportar a Excel -->
+    <!-- SheetJS -->
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
-    <!-- jsPDF para exportar a PDF -->
+    <!-- jsPDF + autotable -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         :root {
-            --primary: #0056b3;      /* Azul Medio */
-            --dark: #003366;         /* Azul Oscuro */
-            --light: #e6f0fa;        /* Azul Claro (Fondos suaves) */
+            --primary: #0056b3;
+            --dark: #003366;
+            --light: #e6f0fa;
             --white: #ffffff;
             --gray: #f8f9fa;
             --text: #333333;
             --border: #ddeeff;
         }
 
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--white); color: var(--text); margin: 0; padding: 20px; }
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            background-color: var(--white); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 20px; 
+        }
         
-        /* Layout */
-        .app-container { max-width: 1200px; margin: 0 auto; display: grid; gap: 30px; }
+        .app-container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            display: grid; 
+            gap: 30px; 
+        }
         
-        header { border-bottom: 2px solid var(--light); padding-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        header { 
+            border-bottom: 2px solid var(--light); 
+            padding-bottom: 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            flex-wrap: wrap;
+            gap: 10px;
+        }
         h1 { color: var(--dark); margin: 0; font-size: 1.8rem; }
-        h2 { color: var(--primary); font-size: 1.2rem; margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        h2 { 
+            color: var(--primary); 
+            font-size: 1.2rem; 
+            margin-top: 0; 
+            border-bottom: 1px solid var(--border); 
+            padding-bottom: 10px; 
+        }
 
-        /* Componentes */
-        .card { border: 1px solid var(--border); border-radius: 12px; padding: 25px; background: var(--white); box-shadow: 0 4px 12px rgba(0, 51, 102, 0.05); }
+        .card { 
+            border: 1px solid var(--border); 
+            border-radius: 12px; 
+            padding: 25px; 
+            background: var(--white); 
+            box-shadow: 0 4px 12px rgba(0, 51, 102, 0.05); 
+        }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         
-        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { 
+            .grid-2 { grid-template-columns: 1fr; } 
+        }
 
-        /* Formularios */
         .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark); font-size: 0.9rem; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; transition: border 0.3s; }
-        input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--light); }
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: 600; 
+            color: var(--dark); 
+            font-size: 0.9rem; 
+        }
+        input, select { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid #ccc; 
+            border-radius: 6px; 
+            font-size: 1rem; 
+            transition: border 0.3s; 
+            box-sizing: border-box;
+        }
+        input:focus { 
+            border-color: var(--primary); 
+            outline: none; 
+            box-shadow: 0 0 0 3px var(--light); 
+        }
         
-        button { background-color: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+        button { 
+            background-color: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            transition: background 0.2s; 
+        }
         button:hover { background-color: var(--dark); }
-        button.outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        button.outline { 
+            background: transparent; 
+            border: 2px solid var(--primary); 
+            color: var(--primary); 
+        }
         button.outline:hover { background: var(--light); }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
 
-        /* Dashboard de Ganancias */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
-        .stat-box { background: var(--light); padding: 15px; border-radius: 8px; text-align: center; }
-        .stat-val { font-size: 1.5rem; font-weight: bold; color: var(--dark); display: block; }
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 15px; 
+            margin-top: 15px; 
+        }
+        .stat-box { 
+            background: var(--light); 
+            padding: 15px; 
+            border-radius: 8px; 
+            text-align: center; 
+        }
+        .stat-val { 
+            font-size: 1.5rem; 
+            font-weight: bold; 
+            color: var(--dark); 
+            display: block; 
+        }
         .stat-label { font-size: 0.85rem; color: var(--text); }
         
-        /* Tablas */
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background: var(--dark); color: white; padding: 12px; text-align: left; font-size: 0.9rem; }
-        td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        th { 
+            background: var(--dark); 
+            color: white; 
+            padding: 12px; 
+            text-align: left; 
+            font-size: 0.9rem; 
+        }
+        td { 
+            padding: 12px; 
+            border-bottom: 1px solid var(--border); 
+            font-size: 0.9rem; 
+        }
         tr:hover { background-color: var(--light); }
 
-        /* Utilidades */
         .hidden { display: none; }
-        .alert { padding: 15px; border-radius: 6px; margin-top: 15px; font-weight: 500; }
+        .alert { 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin-top: 15px; 
+            font-weight: 500; 
+        }
         .alert-good { background-color: #d4edda; color: #155724; }
         .alert-bad { background-color: #f8d7da; color: #721c24; }
+        .alert-info { background-color: #d1ecf1; color: #0c5460; }
+
+        #connectionStatus {
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: var(--light);
+        }
+        .status-ok { color: #155724; background: #d4edda !important; }
+        .status-error { color: #721c24; background: #f8d7da !important; }
+        .status-loading { color: #856404; background: #fff3cd !important; }
     </style>
 </head>
 <body>
@@ -73,7 +177,7 @@
 <div class="app-container">
     <header>
         <h1>LogTrack 📊</h1>
-        <div id="connectionStatus" style="font-size:0.8rem; color:var(--text);">Verificando conexión...</div>
+        <div id="connectionStatus" class="status-loading">Verificando conexión...</div>
     </header>
 
     <!-- SECCIÓN 1: INGRESO DE DATOS -->
@@ -89,27 +193,31 @@
                 <div class="grid-2" style="gap:10px;">
                     <div class="form-group">
                         <label>Minutos en Llamada</label>
-                        <input type="number" id="callMinutes" placeholder="0">
+                        <input type="number" id="callMinutes" placeholder="0" min="0">
                     </div>
                     <div class="form-group">
                         <label>Llamadas Totales</label>
-                        <input type="number" id="totalCalls" placeholder="0">
+                        <input type="number" id="totalCalls" placeholder="0" min="0">
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Tiempo Disponible Total</label>
+                    <label>Tiempo Disponible Total (en línea)</label>
                     <div style="display: flex; gap:10px;">
-                        <input type="number" id="availHours" placeholder="Horas">
-                        <input type="number" id="availMins" placeholder="Min">
+                        <input type="number" id="availHours" placeholder="Horas" min="0">
+                        <input type="number" id="availMins" placeholder="Min" min="0" max="59">
                     </div>
                 </div>
                 
-                <!-- Feedback visual inmediato -->
-                <div style="background:var(--light); padding:10px; border-radius:6px; margin-bottom:15px; font-size:0.9rem;">
-                    <strong>Ganancia Estimada del Día:</strong> <span id="dayEstimate">$0.00</span>
+                <div style="background:var(--light); padding:12px; border-radius:6px; margin-bottom:15px; font-size:0.9rem;">
+                    <strong>Ganancia Estimada del Día:</strong> 
+                    <span id="dayEstimate" style="font-size:1.2rem; color:var(--primary); font-weight:bold;">$0.00</span>
+                    <div style="font-size:0.8rem; color:#666; margin-top:4px;">
+                        (Min. llamada + Min. disponible) × $0.10
+                    </div>
                 </div>
 
-                <button onclick="saveLog()">💾 Guardar Registro</button>
+                <button id="btnSave" onclick="saveLog()">💾 Guardar Registro</button>
+                <div id="saveFeedback" class="hidden" style="margin-top:12px;"></div>
             </div>
         </div>
 
@@ -127,7 +235,7 @@
                 </div>
                 <div class="form-group">
                     <label style="font-size:0.8rem; text-align:center;">Pago Real Recibido ($)</label>
-                    <input type="number" id="realPayment" placeholder="0.00" style="text-align:center; font-weight:bold; color:var(--primary);">
+                    <input type="number" id="realPayment" placeholder="0.00" step="0.01" style="text-align:center; font-weight:bold; color:var(--primary);">
                 </div>
             </div>
             <button class="outline" style="width:100%; margin-top:10px;" onclick="savePayment()">Verificar Discrepancia</button>
@@ -140,7 +248,7 @@
     <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
             <h2>📈 Reportes y Tendencias</h2>
-            <div style="display:flex; gap:10px;">
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
                 <input type="date" id="filterStart">
                 <input type="date" id="filterEnd">
                 <button onclick="loadReports()">Filtrar</button>
@@ -170,71 +278,98 @@
             <canvas id="trendsChart"></canvas>
         </div>
 
-        <div style="margin-top:30px; display:flex; gap:10px; justify-content:flex-end;">
+        <div style="margin-top:30px; display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
             <button class="outline" onclick="exportPDF()">📄 PDF</button>
             <button class="outline" onclick="exportExcel()">📊 Excel</button>
         </div>
 
-        <table id="reportTable">
-            <thead>
-                <tr>
-                    <th>Fecha</th>
-                    <th>Min. Llamada</th>
-                    <th># Llamadas</th>
-                    <th>Promedio</th>
-                    <th>Ganancia ($)</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+        <div style="overflow-x:auto;">
+            <table id="reportTable">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Min. Llamada</th>
+                        <th># Llamadas</th>
+                        <th>Disponible</th>
+                        <th>Promedio</th>
+                        <th>Ganancia ($)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
-    // --- LÓGICA DE NEGOCIO ---
+    // --- CONFIGURACIÓN ---
     const RATE_PER_MINUTE = 0.10;
-    let currentLogs = []; // Almacena los datos cargados para exportar
+    let currentLogs = [];
+    let chartInstance = null;
 
-    // Inicialización
-    document.addEventListener('DOMContentLoaded', () => {
+    // --- INICIALIZACIÓN ---
+    document.addEventListener('DOMContentLoaded', async () => {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('dateInput').value = today;
         document.getElementById('filterEnd').value = today;
         
-        // Fecha inicio default (hace 7 días)
         const lastWeek = new Date();
         lastWeek.setDate(lastWeek.getDate() - 7);
         document.getElementById('filterStart').value = lastWeek.toISOString().split('T')[0];
 
-        handleDateSelect();
-        loadReports(); // Cargar datos iniciales
+        // Mes actual por defecto en pagos
+        const now = new Date();
+        document.getElementById('paymentMonth').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        await checkConnection();
+        await handleDateSelect();
+        await loadReports();
     });
 
-    // 1. Manejo del Formulario Diario
+    // --- VERIFICAR CONEXIÓN A LA API ---
+    async function checkConnection() {
+        const statusEl = document.getElementById('connectionStatus');
+        statusEl.textContent = 'Verificando conexión...';
+        statusEl.className = 'status-loading';
+
+        try {
+            const res = await fetch('/api/logs?start=2099-01-01&end=2099-01-02');
+            if (res.ok) {
+                statusEl.textContent = '✅ Conectado a la base de datos';
+                statusEl.className = 'status-ok';
+            } else {
+                throw new Error('Respuesta no OK');
+            }
+        } catch (e) {
+            statusEl.textContent = '❌ Error de conexión (revisa Functions + Binding DB)';
+            statusEl.className = 'status-error';
+            console.error('Error de conexión:', e);
+        }
+    }
+
+    // --- 1. FORMULARIO DIARIO ---
     document.getElementById('dateInput').addEventListener('change', handleDateSelect);
 
     async function handleDateSelect() {
         const date = document.getElementById('dateInput').value;
-        if(!date) return;
+        if (!date) return;
         
-        // Buscar si ya existe dato para este día
+        document.getElementById('dataForm').classList.remove('hidden');
+        document.getElementById('saveFeedback').classList.add('hidden');
+        
         try {
             const res = await fetch(`/api/logs?start=${date}&end=${date}`);
             const data = await res.json();
             
-            document.getElementById('dataForm').classList.remove('hidden');
-            
-            if (data && data.length > 0) {
+            if (Array.isArray(data) && data.length > 0) {
                 const log = data[0];
-                document.getElementById('callMinutes').value = log.call_minutes;
-                document.getElementById('totalCalls').value = log.total_calls;
-                // Convertir minutos totales disponibles a horas/min
-                const h = Math.floor(log.available_minutes / 60);
-                const m = log.available_minutes % 60;
-                document.getElementById('availHours').value = h;
-                document.getElementById('availMins').value = m;
+                document.getElementById('callMinutes').value = log.call_minutes ?? '';
+                document.getElementById('totalCalls').value = log.total_calls ?? '';
+                
+                const totalAvail = log.available_minutes || 0;
+                document.getElementById('availHours').value = Math.floor(totalAvail / 60);
+                document.getElementById('availMins').value = totalAvail % 60;
             } else {
-                // Limpiar si es nuevo
                 document.getElementById('callMinutes').value = '';
                 document.getElementById('totalCalls').value = '';
                 document.getElementById('availHours').value = '';
@@ -242,11 +377,12 @@
             }
             calculateDayEstimate();
         } catch (e) {
-            console.error("Error cargando día", e);
+            console.error("Error cargando día:", e);
+            showFeedback('Error al cargar datos del día', false);
         }
     }
 
-    // Calculadora reactiva en el formulario
+    // Calculadora reactiva
     ['callMinutes', 'availHours', 'availMins'].forEach(id => {
         document.getElementById(id).addEventListener('input', calculateDayEstimate);
     });
@@ -257,14 +393,9 @@
         const availM = parseFloat(document.getElementById('availMins').value) || 0;
         
         const totalAvailMins = (availH * 60) + availM;
-        // Según tu regla: $0.10 por minuto en llamada Y por minuto disponible
-        // Nota: Asumo que la regla es sumar ambos tiempos. Si es solapado, ajusta aquí.
-        // Interpretación: "0.10 por minuto tanto para llamada como conectado".
-        // Normalmente 'disponible' incluye 'llamada'. Usaré el mayor de los dos o la suma según tu lógica.
-        // Lógica estándar call center: Se paga por tiempo de conexión total (Available).
         
-        const totalPayableMinutes = totalAvailMins; // Si Available incluye todo el tiempo logueado.
-        const estimated = totalPayableMinutes * RATE_PER_MINUTE;
+        // MISMA LÓGICA QUE EL BACKEND: suma de ambos tiempos × $0.10
+        const estimated = (callMins + totalAvailMins) * RATE_PER_MINUTE;
         
         document.getElementById('dayEstimate').innerText = `$${estimated.toFixed(2)}`;
         return { callMins, totalAvailMins, estimated };
@@ -272,52 +403,88 @@
 
     async function saveLog() {
         const date = document.getElementById('dateInput').value;
+        if (!date) {
+            alert('Selecciona una fecha');
+            return;
+        }
+
         const { callMins, totalAvailMins, estimated } = calculateDayEstimate();
         const totalCalls = parseInt(document.getElementById('totalCalls').value) || 0;
+
+        const btn = document.getElementById('btnSave');
+        btn.disabled = true;
+        btn.textContent = 'Guardando...';
 
         const payload = {
             date: date,
             call_minutes: callMins,
             total_calls: totalCalls,
-            available_minutes: totalAvailMins,
-            earnings_estimated: estimated
+            available_minutes: totalAvailMins
+            // earnings_estimated lo calcula el backend para mantener consistencia
         };
 
-        const res = await fetch('/api/logs', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
+        try {
+            const res = await fetch('/api/logs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-        if(res.ok) {
-            alert('✅ Registro guardado');
-            loadReports(); // Recargar gráficos
-        } else {
-            alert('❌ Error al guardar');
+            const result = await res.json();
+
+            if (res.ok && result.success) {
+                showFeedback(`✅ Guardado correctamente. Ganancia: $${(result.earnings_estimated || estimated).toFixed(2)}`, true);
+                await loadReports(); // refrescar reportes
+            } else {
+                showFeedback(`❌ Error: ${result.error || 'No se pudo guardar'}`, false);
+            }
+        } catch (e) {
+            console.error(e);
+            showFeedback('❌ Error de red al guardar', false);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '💾 Guardar Registro';
         }
     }
 
-    // 2. Reportes y Gráficos
-    let chartInstance = null;
+    function showFeedback(msg, isGood) {
+        const el = document.getElementById('saveFeedback');
+        el.className = isGood ? 'alert alert-good' : 'alert alert-bad';
+        el.innerHTML = msg;
+        el.classList.remove('hidden');
+    }
 
+    // --- 2. REPORTES ---
     async function loadReports() {
         const start = document.getElementById('filterStart').value;
         const end = document.getElementById('filterEnd').value;
 
-        const res = await fetch(`/api/logs?start=${start}&end=${end}`);
-        currentLogs = await res.json();
-        
-        renderTable(currentLogs);
-        renderChart(currentLogs);
-        updateSummary(currentLogs);
+        try {
+            const res = await fetch(`/api/logs?start=${start}&end=${end}`);
+            const data = await res.json();
+            
+            if (!Array.isArray(data)) {
+                console.error('Respuesta inesperada:', data);
+                currentLogs = [];
+            } else {
+                currentLogs = data;
+            }
+            
+            renderTable(currentLogs);
+            renderChart(currentLogs);
+            updateSummary(currentLogs);
+        } catch (e) {
+            console.error("Error cargando reportes:", e);
+            currentLogs = [];
+        }
     }
 
     function updateSummary(data) {
         let tMins = 0, tCalls = 0, tMoney = 0;
         data.forEach(d => {
-            tMins += d.call_minutes;
-            tCalls += d.total_calls;
-            tMoney += d.earnings_estimated;
+            tMins += (d.call_minutes || 0);
+            tCalls += (d.total_calls || 0);
+            tMoney += (d.earnings_estimated || 0);
         });
 
         document.getElementById('totalMins').innerText = tMins;
@@ -331,18 +498,25 @@
     function renderTable(data) {
         const tbody = document.querySelector('#reportTable tbody');
         tbody.innerHTML = '';
+        
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#666;">No hay registros en este rango</td></tr>';
+            return;
+        }
+
         data.forEach(row => {
             const avg = row.total_calls > 0 ? (row.call_minutes / row.total_calls).toFixed(1) : '0';
-            const tr = `
-                <tr>
-                    <td>${row.date}</td>
-                    <td>${row.call_minutes}</td>
-                    <td>${row.total_calls}</td>
-                    <td>${avg} min</td>
-                    <td>$${row.earnings_estimated.toFixed(2)}</td>
-                </tr>
+            const avail = row.available_minutes || 0;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.date}</td>
+                <td>${row.call_minutes || 0}</td>
+                <td>${row.total_calls || 0}</td>
+                <td>${avail} min</td>
+                <td>${avg} min</td>
+                <td>$${(row.earnings_estimated || 0).toFixed(2)}</td>
             `;
-            tbody.innerHTML += tr;
+            tbody.appendChild(tr);
         });
     }
 
@@ -350,8 +524,7 @@
         const ctx = document.getElementById('trendsChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
-        // Ordenar por fecha para el gráfico
-        const sorted = [...data].sort((a,b) => new Date(a.date) - new Date(b.date));
+        const sorted = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
 
         chartInstance = new Chart(ctx, {
             type: 'line',
@@ -360,56 +533,82 @@
                 datasets: [
                     {
                         label: 'Minutos Llamada',
-                        data: sorted.map(d => d.call_minutes),
+                        data: sorted.map(d => d.call_minutes || 0),
                         borderColor: '#0056b3',
-                        tension: 0.3
+                        backgroundColor: 'rgba(0,86,179,0.1)',
+                        tension: 0.3,
+                        fill: true
                     },
                     {
                         label: 'Ganancia ($)',
-                        data: sorted.map(d => d.earnings_estimated),
+                        data: sorted.map(d => d.earnings_estimated || 0),
                         borderColor: '#28a745',
+                        backgroundColor: 'rgba(40,167,69,0.1)',
                         tension: 0.3,
-                        yAxisID: 'y1'
+                        yAxisID: 'y1',
+                        fill: true
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
                 scales: {
-                    y: { position: 'left' },
-                    y1: { position: 'right', grid: { drawOnChartArea: false } }
+                    y: { 
+                        position: 'left',
+                        title: { display: true, text: 'Minutos' }
+                    },
+                    y1: { 
+                        position: 'right', 
+                        grid: { drawOnChartArea: false },
+                        title: { display: true, text: 'USD ($)' }
+                    }
                 }
             }
         });
     }
 
-    // 3. Lógica de Pagos (Discrepancias)
+    // --- 3. PAGOS Y DISCREPANCIAS ---
+    function getLastDayOfMonth(yearMonth) {
+        // yearMonth = "2026-08"
+        const [year, month] = yearMonth.split('-').map(Number);
+        // new Date(year, month, 0) da el último día del mes anterior → mes actual
+        return new Date(year, month, 0).getDate();
+    }
+
     async function loadPaymentComparison() {
-        const month = document.getElementById('paymentMonth').value; // YYYY-MM
-        if(!month) return;
+        const month = document.getElementById('paymentMonth').value;
+        if (!month) return;
 
-        // 1. Traer logs de ese mes para sumar estimado
-        // Truco: construir fechas start y end del mes
+        const lastDay = getLastDayOfMonth(month);
         const start = `${month}-01`;
-        const end = `${month}-31`; // SQLite maneja fechas invalidas cortando al ultimo dia real a veces, o mejor usamos JS logic
-        
-        const resLogs = await fetch(`/api/logs?start=${start}&end=${end}`);
-        const logs = await resLogs.json();
-        
-        const totalEstimated = logs.reduce((sum, item) => sum + (item.earnings_estimated || 0), 0);
-        document.getElementById('calcEarnings').innerText = `$${totalEstimated.toFixed(2)}`;
+        const end = `${month}-${String(lastDay).padStart(2, '0')}`;
 
-        // 2. Traer pago real guardado
-        const resPay = await fetch(`/api/payments?month=${month}`);
-        const payData = await resPay.json();
-        
-        if(payData) {
-            document.getElementById('realPayment').value = payData.amount_received;
-            calculateDiscrepancy(totalEstimated, payData.amount_received);
-        } else {
-            document.getElementById('realPayment').value = '';
-            document.getElementById('discrepancyBox').classList.add('hidden');
+        try {
+            // 1. Sumar estimado del mes
+            const resLogs = await fetch(`/api/logs?start=${start}&end=${end}`);
+            const logs = await resLogs.json();
+            
+            const totalEstimated = Array.isArray(logs) 
+                ? logs.reduce((sum, item) => sum + (item.earnings_estimated || 0), 0) 
+                : 0;
+            
+            document.getElementById('calcEarnings').innerText = `$${totalEstimated.toFixed(2)}`;
+
+            // 2. Traer pago real
+            const resPay = await fetch(`/api/payments?month=${month}`);
+            const payData = await resPay.json();
+            
+            if (payData && payData.amount_received != null) {
+                document.getElementById('realPayment').value = payData.amount_received;
+                calculateDiscrepancy(totalEstimated, payData.amount_received);
+            } else {
+                document.getElementById('realPayment').value = '';
+                document.getElementById('discrepancyBox').classList.add('hidden');
+            }
+        } catch (e) {
+            console.error("Error en loadPaymentComparison:", e);
         }
     }
 
@@ -417,22 +616,43 @@
         const month = document.getElementById('paymentMonth').value;
         const amount = parseFloat(document.getElementById('realPayment').value) || 0;
         
-        const res = await fetch('/api/payments', {
-            method: 'POST',
-            body: JSON.stringify({ month_id: month, amount_received: amount })
-        });
-        
-        if(res.ok) {
-            loadPaymentComparison(); // Recalcular UI
+        if (!month) {
+            alert('Selecciona un mes');
+            return;
+        }
+
+        const payload = {
+            month_id: month,
+            amount_received: amount,
+            payment_date: new Date().toISOString().split('T')[0]
+        };
+
+        try {
+            const res = await fetch('/api/payments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await res.json();
+
+            if (res.ok && result.success) {
+                await loadPaymentComparison();
+            } else {
+                alert('Error al guardar pago: ' + (result.error || 'desconocido'));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error de red al guardar el pago');
         }
     }
 
     function calculateDiscrepancy(estimated, real) {
         const diff = real - estimated;
         const box = document.getElementById('discrepancyBox');
-        box.classList.remove('hidden', 'alert-good', 'alert-bad');
+        box.classList.remove('hidden', 'alert-good', 'alert-bad', 'alert-info');
         
-        if(Math.abs(diff) < 1) {
+        if (Math.abs(diff) < 0.5) {
             box.innerHTML = "✅ <strong>Pago Exacto:</strong> No hay diferencias significativas.";
             box.classList.add('alert-good');
         } else if (diff > 0) {
@@ -440,13 +660,18 @@
             box.classList.add('alert-good');
         } else {
             const minsLost = Math.abs(diff / RATE_PER_MINUTE).toFixed(0);
-            box.innerHTML = `⚠️ <strong>Déficit:</strong> Faltan <strong>$${Math.abs(diff).toFixed(2)}</strong>.<br>Equivale a aprox. <strong>${minsLost} minutos</strong> no pagados.`;
+            box.innerHTML = `⚠️ <strong>Déficit:</strong> Faltan <strong>$${Math.abs(diff).toFixed(2)}</strong>.<br>
+                Equivale a aprox. <strong>${minsLost} minutos</strong> no pagados.`;
             box.classList.add('alert-bad');
         }
     }
 
-    // Exportaciones simples
+    // --- EXPORTACIONES ---
     function exportExcel() {
+        if (!currentLogs.length) {
+            alert('No hay datos para exportar');
+            return;
+        }
         const ws = XLSX.utils.json_to_sheet(currentLogs);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Reporte");
@@ -454,19 +679,25 @@
     }
 
     function exportPDF() {
+        if (!currentLogs.length) {
+            alert('No hay datos para exportar');
+            return;
+        }
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
+        doc.setFontSize(16);
         doc.text("Reporte de Actividad - LogTrack", 14, 20);
         
         const tableData = currentLogs.map(log => [
             log.date, 
-            log.call_minutes, 
-            log.total_calls, 
-            `$${log.earnings_estimated.toFixed(2)}`
+            log.call_minutes || 0, 
+            log.total_calls || 0, 
+            log.available_minutes || 0,
+            `$${(log.earnings_estimated || 0).toFixed(2)}`
         ]);
 
         doc.autoTable({
-            head: [['Fecha', 'Minutos', 'Llamadas', 'Ganancia']],
+            head: [['Fecha', 'Min. Llamada', 'Llamadas', 'Disponible', 'Ganancia']],
             body: tableData,
             startY: 30,
         });
