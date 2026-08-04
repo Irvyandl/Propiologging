@@ -3,330 +3,476 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogTrack - Registro y Reportes de Actividad</title>
-    
-    <!-- Librerías Externas vía CDN para Gráficos y Exportaciones -->
-    <script src="https://jsdelivr.net"></script>
-    <script src="https://cloudflare.com"></script>
-    <script src="https://cloudflare.com"></script>
-    <script src="https://cloudflare.com"></script>
+    <title>LogTrack - Panel de Trabajo</title>
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS para exportar a Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <!-- jsPDF para exportar a PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        /* --- ESTILOS GENERALES Y PALETA DE AZULES Y BLANCO --- */
         :root {
-            --bg-main: #ffffff;
-            --blue-dark: #003366;
-            --blue-medium: #0056b3;
-            --blue-light: #e6f0fa;
-            --blue-accent: #007bff;
-            --text-dark: #212529;
-            --text-muted: #6c757d;
-            --border-color: #dee2e6;
-            --danger: #dc3545;
-            --success: #28a745;
+            --primary: #0056b3;      /* Azul Medio */
+            --dark: #003366;         /* Azul Oscuro */
+            --light: #e6f0fa;        /* Azul Claro (Fondos suaves) */
+            --white: #ffffff;
+            --gray: #f8f9fa;
+            --text: #333333;
+            --border: #ddeeff;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--white); color: var(--text); margin: 0; padding: 20px; }
+        
+        /* Layout */
+        .app-container { max-width: 1200px; margin: 0 auto; display: grid; gap: 30px; }
+        
+        header { border-bottom: 2px solid var(--light); padding-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        h1 { color: var(--dark); margin: 0; font-size: 1.8rem; }
+        h2 { color: var(--primary); font-size: 1.2rem; margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
 
-        body {
-            background-color: var(--bg-main);
-            color: var(--text-dark);
-            line-height: 1.6;
-            padding: 20px;
-        }
+        /* Componentes */
+        .card { border: 1px solid var(--border); border-radius: 12px; padding: 25px; background: var(--white); box-shadow: 0 4px 12px rgba(0, 51, 102, 0.05); }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+        /* Formularios */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark); font-size: 0.9rem; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; transition: border 0.3s; }
+        input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--light); }
+        
+        button { background-color: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+        button:hover { background-color: var(--dark); }
+        button.outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        button.outline:hover { background: var(--light); }
 
-        header {
-            border-bottom: 2px solid var(--blue-light);
-            padding-bottom: 15px;
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
+        /* Dashboard de Ganancias */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        .stat-box { background: var(--light); padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-val { font-size: 1.5rem; font-weight: bold; color: var(--dark); display: block; }
+        .stat-label { font-size: 0.85rem; color: var(--text); }
+        
+        /* Tablas */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background: var(--dark); color: white; padding: 12px; text-align: left; font-size: 0.9rem; }
+        td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        tr:hover { background-color: var(--light); }
 
-        header h1 {
-            color: var(--blue-dark);
-            font-size: 1.8rem;
-            font-weight: 600;
-        }
-
-        /* --- CONTENEDORES Y TARJETAS (GRID & FLEX) --- */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-
-        @media (min-width: 768px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr 2fr;
-            }
-        }
-
-        .card {
-            background: var(--bg-main);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0, 51, 102, 0.05);
-        }
-
-        .card h2 {
-            color: var(--blue-dark);
-            font-size: 1.2rem;
-            margin-bottom: 15px;
-            border-bottom: 1px solid var(--blue-light);
-            padding-bottom: 8px;
-        }
-
-        /* --- FORMULARIOS --- */
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: var(--blue-dark);
-            font-size: 0.9rem;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            font-size: 10px;
-            font-size: 1rem;
-            transition: border-color 0.2s;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--blue-accent);
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        /* --- BOTONES --- */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 15px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s, color 0.2s;
-            border: none;
-            width: 100%;
-        }
-
-        .btn-primary {
-            background-color: var(--blue-medium);
-            color: #ffffff;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--blue-dark);
-        }
-
-        .btn-primary:disabled {
-            background-color: var(--text-muted);
-            cursor: not-allowed;
-        }
-
-        .btn-outline {
-            background-color: transparent;
-            border: 1px solid var(--blue-medium);
-            color: var(--blue-medium);
-            width: auto;
-        }
-
-        .btn-outline:hover {
-            background-color: var(--blue-light);
-        }
-
-        /* --- SECCIÓN DE FILTROS --- */
-        .filter-bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: flex-end;
-            margin-bottom: 25px;
-            background-color: var(--blue-light);
-            padding: 15px;
-            border-radius: 8px;
-        }
-
-        .filter-group {
-            flex: 1;
-            min-width: 150px;
-        }
-
-        /* --- TABLERO DE MÉTRICAS (KPIs) --- */
-        .kpi-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .kpi-card {
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 15px;
-            text-align: center;
-            background-color: var(--bg-main);
-        }
-
-        .kpi-card .kpi-title {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin-bottom: 5px;
-        }
-
-        .kpi-card .kpi-value {
-            font-size: 1.4rem;
-            font-weight: 600;
-            color: var(--blue-dark);
-        }
-
-        .kpi-card.discrepancy-neg .kpi-value { color: var(--danger); }
-        .kpi-card.discrepancy-pos .kpi-value { color: var(--success); }
-
-        /* --- TABLAS --- */
-        .table-responsive {
-            width: 100%;
-            overflow-x: auto;
-            margin-top: 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 0.95rem;
-        }
-
-        th, td {
-            padding: 12px 15px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        th {
-            background-color: var(--blue-light);
-            color: var(--blue-dark);
-            font-weight: 600;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        tr:nth-child(even) {
-            background-color: rgba(0, 51, 102, 0.01);
-        }
-
-        /* --- COMPONENTES AUXILIARES --- */
-        .disabled-overlay {
-            opacity: 0.5;
-            pointer-events: none;
-        }
-
-        .actions-row {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .chart-wrapper {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
+        /* Utilidades */
+        .hidden { display: none; }
+        .alert { padding: 15px; border-radius: 6px; margin-top: 15px; font-weight: 500; }
+        .alert-good { background-color: #d4edda; color: #155724; }
+        .alert-bad { background-color: #f8d7da; color: #721c24; }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="app-container">
     <header>
-        <h1>LogTrack // Sistema de Rendimiento y Ganancias</h1>
-        <div style="font-size: 0.9rem; color: var(--text-muted);" id="live-clock">Cargando contexto...</div>
+        <h1>LogTrack 📊</h1>
+        <div id="connectionStatus" style="font-size:0.8rem; color:var(--text);">Verificando conexión...</div>
     </header>
 
-    <div class="dashboard-grid">
-        <!-- BLOQUE IZQUIERDO: FLUJO DE ENTRADA DE DATOS -->
+    <!-- SECCIÓN 1: INGRESO DE DATOS -->
+    <div class="grid-2">
         <div class="card">
-            <h2>1. Selección de Fecha</h2>
+            <h2>📅 Nuevo Registro</h2>
             <div class="form-group">
-                <label for="log-date">Fecha de Trabajo</label>
-                <input type="date" id="log-date" class="form-control">
+                <label>Selecciona Fecha</label>
+                <input type="date" id="dateInput">
             </div>
-
-            <div id="form-container" class="disabled-overlay">
-                <h2>2. Registro de Actividad</h2>
-                <form id="activity-form">
+            
+            <div id="dataForm" class="hidden">
+                <div class="grid-2" style="gap:10px;">
                     <div class="form-group">
-                        <label for="call-minutes">Minutos en Llamada (Entero)</label>
-                        <input type="number" id="call-minutes" class="form-control" min="0" required placeholder="Ej. 120">
+                        <label>Minutos en Llamada</label>
+                        <input type="number" id="callMinutes" placeholder="0">
                     </div>
-                    
                     <div class="form-group">
-                        <label for="total-calls">Cantidad de Llamadas Tomadas</label>
-                        <input type="number" id="total-calls" class="form-control" min="0" required placeholder="Ej. 25">
+                        <label>Llamadas Totales</label>
+                        <input type="number" id="totalCalls" placeholder="0">
                     </div>
-
-                    <div class="form-group">
-                        <label for="available-time">Tiempo Total Disponible en Línea</label>
-                        <div class="form-row">
-                            <input type="number" id="avail-hours" class="form-control" min="0" required placeholder="Horas">
-                            <input type="number" id="avail-mins" class="form-control" min="0" max="59" required placeholder="Minutos">
-                        </div>
+                </div>
+                <div class="form-group">
+                    <label>Tiempo Disponible Total</label>
+                    <div style="display: flex; gap:10px;">
+                        <input type="number" id="availHours" placeholder="Horas">
+                        <input type="number" id="availMins" placeholder="Min">
                     </div>
+                </div>
+                
+                <!-- Feedback visual inmediato -->
+                <div style="background:var(--light); padding:10px; border-radius:6px; margin-bottom:15px; font-size:0.9rem;">
+                    <strong>Ganancia Estimada del Día:</strong> <span id="dayEstimate">$0.00</span>
+                </div>
 
-                    <button type="submit" id="btn-save" class="btn btn-primary">Guardar Datos del Día</button>
-                </form>
+                <button onclick="saveLog()">💾 Guardar Registro</button>
             </div>
         </div>
 
-        <!-- BLOQUE DERECHO: RENDIMIENTO Y GRÁFICOS -->
+        <!-- SECCIÓN 2: COMPARACIÓN DE PAGOS -->
         <div class="card">
-            <h2>Tendencias y Gráficos del Periodo</h2>
-            <div class="chart-wrapper">
-                <canvas id="trendsChart"></canvas>
+            <h2>💰 Conciliación de Pagos</h2>
+            <div class="form-group">
+                <label>Mes a Verificar</label>
+                <input type="month" id="paymentMonth" onchange="loadPaymentComparison()">
             </div>
+            <div class="grid-2">
+                <div class="stat-box">
+                    <span class="stat-label">El sistema calculó</span>
+                    <span class="stat-val" id="calcEarnings">$0.00</span>
+                </div>
+                <div class="form-group">
+                    <label style="font-size:0.8rem; text-align:center;">Pago Real Recibido ($)</label>
+                    <input type="number" id="realPayment" placeholder="0.00" style="text-align:center; font-weight:bold; color:var(--primary);">
+                </div>
+            </div>
+            <button class="outline" style="width:100%; margin-top:10px;" onclick="savePayment()">Verificar Discrepancia</button>
+            
+            <div id="discrepancyBox" class="hidden"></div>
         </div>
     </div>
 
-    <!-- SECCIÓN INTERACTIVA DE REPORTES -->
-    <div class="card" style="margin-bottom: 30px;">
-        <h2>3. Filtros del Sistema de Reportes</h2>
-        <div class="filter-bar">
-            <div class="filter-group">
-                <label for="filter-type" style="font-size:0.85rem; font-weight:500; color:var(--blue-dark)">Periodo</label>
-                <select id="filter-type" class="form-control">
-                    <option value="all">Todo el Historial</option>
+    <!-- SECCIÓN 3: REPORTES -->
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h2>📈 Reportes y Tendencias</h2>
+            <div style="display:flex; gap:10px;">
+                <input type="date" id="filterStart">
+                <input type="date" id="filterEnd">
+                <button onclick="loadReports()">Filtrar</button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <span class="stat-val" id="totalMins">0</span>
+                <span class="stat-label">Minutos en Llamada</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-val" id="totalCallsStat">0</span>
+                <span class="stat-label">Llamadas Totales</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-val" id="avgTime">0m</span>
+                <span class="stat-label">Tiempo Promedio/Llamada</span>
+            </div>
+            <div class="stat-box" style="background:var(--dark); color:white;">
+                <span class="stat-val" style="color:white;" id="totalMoney">$0.00</span>
+                <span class="stat-label" style="color:#ccc;">Ganancia Total (Est.)</span>
+            </div>
+        </div>
+
+        <div style="height: 300px; margin-top:30px;">
+            <canvas id="trendsChart"></canvas>
+        </div>
+
+        <div style="margin-top:30px; display:flex; gap:10px; justify-content:flex-end;">
+            <button class="outline" onclick="exportPDF()">📄 PDF</button>
+            <button class="outline" onclick="exportExcel()">📊 Excel</button>
+        </div>
+
+        <table id="reportTable">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Min. Llamada</th>
+                    <th># Llamadas</th>
+                    <th>Promedio</th>
+                    <th>Ganancia ($)</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // --- LÓGICA DE NEGOCIO ---
+    const RATE_PER_MINUTE = 0.10;
+    let currentLogs = []; // Almacena los datos cargados para exportar
+
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('dateInput').value = today;
+        document.getElementById('filterEnd').value = today;
+        
+        // Fecha inicio default (hace 7 días)
+        const lastWeek = new Date();
+        lastWeek.setDate(lastWeek.getDate() - 7);
+        document.getElementById('filterStart').value = lastWeek.toISOString().split('T')[0];
+
+        handleDateSelect();
+        loadReports(); // Cargar datos iniciales
+    });
+
+    // 1. Manejo del Formulario Diario
+    document.getElementById('dateInput').addEventListener('change', handleDateSelect);
+
+    async function handleDateSelect() {
+        const date = document.getElementById('dateInput').value;
+        if(!date) return;
+        
+        // Buscar si ya existe dato para este día
+        try {
+            const res = await fetch(`/api/logs?start=${date}&end=${date}`);
+            const data = await res.json();
+            
+            document.getElementById('dataForm').classList.remove('hidden');
+            
+            if (data && data.length > 0) {
+                const log = data[0];
+                document.getElementById('callMinutes').value = log.call_minutes;
+                document.getElementById('totalCalls').value = log.total_calls;
+                // Convertir minutos totales disponibles a horas/min
+                const h = Math.floor(log.available_minutes / 60);
+                const m = log.available_minutes % 60;
+                document.getElementById('availHours').value = h;
+                document.getElementById('availMins').value = m;
+            } else {
+                // Limpiar si es nuevo
+                document.getElementById('callMinutes').value = '';
+                document.getElementById('totalCalls').value = '';
+                document.getElementById('availHours').value = '';
+                document.getElementById('availMins').value = '';
+            }
+            calculateDayEstimate();
+        } catch (e) {
+            console.error("Error cargando día", e);
+        }
+    }
+
+    // Calculadora reactiva en el formulario
+    ['callMinutes', 'availHours', 'availMins'].forEach(id => {
+        document.getElementById(id).addEventListener('input', calculateDayEstimate);
+    });
+
+    function calculateDayEstimate() {
+        const callMins = parseFloat(document.getElementById('callMinutes').value) || 0;
+        const availH = parseFloat(document.getElementById('availHours').value) || 0;
+        const availM = parseFloat(document.getElementById('availMins').value) || 0;
+        
+        const totalAvailMins = (availH * 60) + availM;
+        // Según tu regla: $0.10 por minuto en llamada Y por minuto disponible
+        // Nota: Asumo que la regla es sumar ambos tiempos. Si es solapado, ajusta aquí.
+        // Interpretación: "0.10 por minuto tanto para llamada como conectado".
+        // Normalmente 'disponible' incluye 'llamada'. Usaré el mayor de los dos o la suma según tu lógica.
+        // Lógica estándar call center: Se paga por tiempo de conexión total (Available).
+        
+        const totalPayableMinutes = totalAvailMins; // Si Available incluye todo el tiempo logueado.
+        const estimated = totalPayableMinutes * RATE_PER_MINUTE;
+        
+        document.getElementById('dayEstimate').innerText = `$${estimated.toFixed(2)}`;
+        return { callMins, totalAvailMins, estimated };
+    }
+
+    async function saveLog() {
+        const date = document.getElementById('dateInput').value;
+        const { callMins, totalAvailMins, estimated } = calculateDayEstimate();
+        const totalCalls = parseInt(document.getElementById('totalCalls').value) || 0;
+
+        const payload = {
+            date: date,
+            call_minutes: callMins,
+            total_calls: totalCalls,
+            available_minutes: totalAvailMins,
+            earnings_estimated: estimated
+        };
+
+        const res = await fetch('/api/logs', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+
+        if(res.ok) {
+            alert('✅ Registro guardado');
+            loadReports(); // Recargar gráficos
+        } else {
+            alert('❌ Error al guardar');
+        }
+    }
+
+    // 2. Reportes y Gráficos
+    let chartInstance = null;
+
+    async function loadReports() {
+        const start = document.getElementById('filterStart').value;
+        const end = document.getElementById('filterEnd').value;
+
+        const res = await fetch(`/api/logs?start=${start}&end=${end}`);
+        currentLogs = await res.json();
+        
+        renderTable(currentLogs);
+        renderChart(currentLogs);
+        updateSummary(currentLogs);
+    }
+
+    function updateSummary(data) {
+        let tMins = 0, tCalls = 0, tMoney = 0;
+        data.forEach(d => {
+            tMins += d.call_minutes;
+            tCalls += d.total_calls;
+            tMoney += d.earnings_estimated;
+        });
+
+        document.getElementById('totalMins').innerText = tMins;
+        document.getElementById('totalCallsStat').innerText = tCalls;
+        document.getElementById('totalMoney').innerText = `$${tMoney.toFixed(2)}`;
+        
+        const avg = tCalls > 0 ? (tMins / tCalls).toFixed(1) : 0;
+        document.getElementById('avgTime').innerText = `${avg}m`;
+    }
+
+    function renderTable(data) {
+        const tbody = document.querySelector('#reportTable tbody');
+        tbody.innerHTML = '';
+        data.forEach(row => {
+            const avg = row.total_calls > 0 ? (row.call_minutes / row.total_calls).toFixed(1) : '0';
+            const tr = `
+                <tr>
+                    <td>${row.date}</td>
+                    <td>${row.call_minutes}</td>
+                    <td>${row.total_calls}</td>
+                    <td>${avg} min</td>
+                    <td>$${row.earnings_estimated.toFixed(2)}</td>
+                </tr>
+            `;
+            tbody.innerHTML += tr;
+        });
+    }
+
+    function renderChart(data) {
+        const ctx = document.getElementById('trendsChart').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+
+        // Ordenar por fecha para el gráfico
+        const sorted = [...data].sort((a,b) => new Date(a.date) - new Date(b.date));
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: sorted.map(d => d.date),
+                datasets: [
+                    {
+                        label: 'Minutos Llamada',
+                        data: sorted.map(d => d.call_minutes),
+                        borderColor: '#0056b3',
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Ganancia ($)',
+                        data: sorted.map(d => d.earnings_estimated),
+                        borderColor: '#28a745',
+                        tension: 0.3,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { position: 'left' },
+                    y1: { position: 'right', grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+    }
+
+    // 3. Lógica de Pagos (Discrepancias)
+    async function loadPaymentComparison() {
+        const month = document.getElementById('paymentMonth').value; // YYYY-MM
+        if(!month) return;
+
+        // 1. Traer logs de ese mes para sumar estimado
+        // Truco: construir fechas start y end del mes
+        const start = `${month}-01`;
+        const end = `${month}-31`; // SQLite maneja fechas invalidas cortando al ultimo dia real a veces, o mejor usamos JS logic
+        
+        const resLogs = await fetch(`/api/logs?start=${start}&end=${end}`);
+        const logs = await resLogs.json();
+        
+        const totalEstimated = logs.reduce((sum, item) => sum + (item.earnings_estimated || 0), 0);
+        document.getElementById('calcEarnings').innerText = `$${totalEstimated.toFixed(2)}`;
+
+        // 2. Traer pago real guardado
+        const resPay = await fetch(`/api/payments?month=${month}`);
+        const payData = await resPay.json();
+        
+        if(payData) {
+            document.getElementById('realPayment').value = payData.amount_received;
+            calculateDiscrepancy(totalEstimated, payData.amount_received);
+        } else {
+            document.getElementById('realPayment').value = '';
+            document.getElementById('discrepancyBox').classList.add('hidden');
+        }
+    }
+
+    async function savePayment() {
+        const month = document.getElementById('paymentMonth').value;
+        const amount = parseFloat(document.getElementById('realPayment').value) || 0;
+        
+        const res = await fetch('/api/payments', {
+            method: 'POST',
+            body: JSON.stringify({ month_id: month, amount_received: amount })
+        });
+        
+        if(res.ok) {
+            loadPaymentComparison(); // Recalcular UI
+        }
+    }
+
+    function calculateDiscrepancy(estimated, real) {
+        const diff = real - estimated;
+        const box = document.getElementById('discrepancyBox');
+        box.classList.remove('hidden', 'alert-good', 'alert-bad');
+        
+        if(Math.abs(diff) < 1) {
+            box.innerHTML = "✅ <strong>Pago Exacto:</strong> No hay diferencias significativas.";
+            box.classList.add('alert-good');
+        } else if (diff > 0) {
+            box.innerHTML = `🎉 <strong>Superávit:</strong> Te pagaron <strong>$${diff.toFixed(2)}</strong> de más.`;
+            box.classList.add('alert-good');
+        } else {
+            const minsLost = Math.abs(diff / RATE_PER_MINUTE).toFixed(0);
+            box.innerHTML = `⚠️ <strong>Déficit:</strong> Faltan <strong>$${Math.abs(diff).toFixed(2)}</strong>.<br>Equivale a aprox. <strong>${minsLost} minutos</strong> no pagados.`;
+            box.classList.add('alert-bad');
+        }
+    }
+
+    // Exportaciones simples
+    function exportExcel() {
+        const ws = XLSX.utils.json_to_sheet(currentLogs);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+        XLSX.writeFile(wb, "Reporte_LogTrack.xlsx");
+    }
+
+    function exportPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text("Reporte de Actividad - LogTrack", 14, 20);
+        
+        const tableData = currentLogs.map(log => [
+            log.date, 
+            log.call_minutes, 
+            log.total_calls, 
+            `$${log.earnings_estimated.toFixed(2)}`
+        ]);
+
+        doc.autoTable({
+            head: [['Fecha', 'Minutos', 'Llamadas', 'Ganancia']],
+            body: tableData,
+            startY: 30,
+        });
+        doc.save("Reporte_LogTrack.pdf");
+    }
+</script>
+
+</body>
+</html>
