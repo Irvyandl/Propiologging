@@ -9,9 +9,9 @@ export async function onRequestPost(context) {
     const totalCalls = parseInt(body.total_calls) || 0;
     const availableMinutes = parseInt(body.available_minutes) || 0;
 
-    // Lógica unificada: $0.10 por minuto de llamada + $0.10 por minuto disponible
+    // REGLA DE NEGOCIO CORREGIDA: Solo se paga por minutos en llamada
     const tarifa = 0.10;
-    const gananciaEstimada = (callMinutes + availableMinutes) * tarifa;
+    const gananciaEstimada = callMinutes * tarifa;
 
     const info = await env.DB.prepare(`
       INSERT INTO work_logs (date, call_minutes, total_calls, available_minutes, earnings_estimated)
