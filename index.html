@@ -138,14 +138,14 @@
 <body>
 <div class="app-container">
     <header>
-        <h1>LogTrack 📊</h1>
+        <h1>LogTrack de Irvin. </h1>
         <div id="connectionStatus" class="status-loading">Verificando conexión...</div>
     </header>
 
     <div class="grid-2">
         <!-- NUEVO REGISTRO -->
         <div class="card">
-            <h2>📅 Nuevo Registro</h2>
+            <h2>  Nuevo Registro</h2>
             <div class="form-group">
                 <label>Selecciona Fecha</label>
                 <input type="date" id="dateInput">
@@ -173,7 +173,7 @@
                     <span id="dayEstimate" style="font-size:1.25rem; color:var(--primary); font-weight:bold;">$0.00</span>
                     <div style="font-size:0.78rem; color:#666; margin-top:4px;">Solo minutos en llamada × $0.10</div>
                 </div>
-                <button id="btnSave" onclick="saveLog()">💾 Guardar Registro</button>
+                <button id="btnSave" onclick="saveLog()">  Guardar Registro</button>
                 <div id="saveFeedback" class="hidden" style="margin-top:12px;"></div>
             </div>
         </div>
@@ -181,7 +181,7 @@
         <!-- CONCILIACIÓN DE PAGOS -->
         <div class="card">
             <h2>
-                💰 Conciliación de Pagos
+                  Conciliación de Pagos
                 <div class="switch-container">
                     <span>General</span>
                     <label class="switch">
@@ -231,7 +231,7 @@
     <!-- REPORTES -->
     <div class="card" id="reportsCard">
         <h2>
-            📈 Reportes y Tendencias
+              Reportes y Tendencias
             <div class="switch-container">
                 <span>General</span>
                 <label class="switch">
@@ -330,10 +330,10 @@ async function checkConnection() {
     el.className = 'status-loading';
     try {
         const res = await fetch('/api/logs?start=2099-01-01&end=2099-01-02');
-        if (res.ok) { el.textContent = '✅ Conectado a la base de datos'; el.className = 'status-ok'; }
+        if (res.ok) { el.textContent = '  Conectado a la base de datos'; el.className = 'status-ok'; }
         else throw new Error('No OK');
     } catch (e) {
-        el.textContent = '❌ Error de conexión';
+        el.textContent = '  Error de conexión';
         el.className = 'status-error';
     }
 }
@@ -638,10 +638,10 @@ function calculateDiscrepancy(calcA, calcB, real) {
     const diffA = real - calcA;
     const diffB = real - calcB;
     if (Math.abs(diffA) < 0.5) {
-        box.innerHTML = `✅ <strong>Coincide con modelo de Llamadas</strong> (Calc A). El proveedor paga solo por tiempo en llamada.`;
+        box.innerHTML = `✅ <strong>Coincide con el modelo de Llamadas</strong> (Calc A). El proveedor paga solo por tiempo en llamada.`;
         box.classList.add('alert-good');
     } else if (Math.abs(diffB) < 0.5) {
-        box.innerHTML = `✅ <strong>Coincide con modelo Logueado</strong> (Calc B). El proveedor paga por tiempo total conectado.`;
+        box.innerHTML = `✅ <strong>Coincide con el modelo logueado</strong> (Calc B). El proveedor paga por tiempo total conectado.`;
         box.classList.add('alert-good');
     } else if (real < Math.min(calcA, calcB)) {
         const loss = Math.min(calcA, calcB) - real;
@@ -695,10 +695,10 @@ function exportPDF() {
     const start = document.getElementById('filterStart').value;
     const end = document.getElementById('filterEnd').value;
     doc.setFontSize(16);
-    doc.text('Reporte de Actividad - LogTrack', 14, 18);
+    doc.text('Reporte de Actividad en Propio - LogTrack | Irvin Prado', 14, 18);
     doc.setFontSize(10);
     doc.setTextColor(80);
-    doc.text(`Filtro: ${start} → ${end}  |  Vista: ${isReportDetail ? 'Detallada' : 'General'}`, 14, 25);
+    doc.text(`Entre las fechas: ${start} → ${end}  |  Tipo de vista: ${isReportDetail ? 'Detallada' : 'General'}`, 14, 25);
     doc.setTextColor(0);
     let y = 32;
     doc.setFontSize(11);
