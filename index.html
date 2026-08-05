@@ -424,7 +424,7 @@ function updateSummary(data) {
     data.forEach(d => {
         tMins += (d.call_minutes || 0);
         tCalls += (d.total_calls || 0);
-        tMoney += (d.earnings_estimated || 0);
+        tMoney += (d.call_minutes || 0) * RATE;
         tAvail += (d.available_minutes || 0);
     });
     document.getElementById('totalMins').innerText = tMins;
