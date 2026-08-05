@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogTrack - Panel de Trabajo</title>
+    <title>LogTrack de Irvin</title>
+    <link rel="icon" href="https://raw.githubusercontent.com/Irvyandl/VirtualAssistance/refs/heads/main/logo.ico" type="image/x-icon">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -27,16 +28,31 @@
             background: var(--white); 
             color: var(--text); 
             margin: 0; 
-            padding: 16px; 
+            padding: 0 16px 40px; 
         }
         .app-container { max-width: 1200px; margin: 0 auto; display: grid; gap: 24px; }
-        header { 
-            border-bottom: 2px solid var(--light); 
-            padding-bottom: 16px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            flex-wrap: wrap; gap: 12px;
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--light);
+            padding: 14px 0;
+            margin: 0 -16px;
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        .sticky-header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
         }
         h1 { color: var(--dark); margin: 0; font-size: 1.6rem; }
         h2 { 
@@ -51,7 +67,8 @@
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         @media (max-width: 768px) { 
             .grid-2 { grid-template-columns: 1fr; }
-            body { padding: 12px; }
+            body { padding: 0 12px 40px; }
+            .sticky-header { margin: 0 -12px; padding-left: 12px; padding-right: 12px; }
             .card { padding: 16px; }
         }
         .form-group { margin-bottom: 14px; }
@@ -122,9 +139,12 @@
         .meta-fill { height: 100%; background: var(--success); border-radius: 8px; transition: width 0.4s; }
         .meta-fill.over { background: #17a2b8; }
 
-        .month-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .month-chips { 
+            display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; 
+            justify-content: center;
+        }
         .month-chip {
-            padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border);
+            padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
             background: var(--white); cursor: pointer; font-size: 0.85rem; transition: all 0.2s;
         }
         .month-chip.selected { background: var(--primary); color: white; border-color: var(--primary); }
@@ -133,19 +153,30 @@
         .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
         @media (max-width: 600px) { .kpi-row { grid-template-columns: 1fr; } }
         .export-btns { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 20px; }
+
+        .site-footer {
+            text-align: center;
+            padding: 24px 16px;
+            margin-top: 20px;
+            border-top: 1px solid var(--border);
+            font-size: 0.9rem;
+            color: #555;
+        }
+        .site-footer em { color: var(--dark); }
     </style>
 </head>
 <body>
 <div class="app-container">
-    <header>
-        <h1>LogTrack de Irvin. </h1>
-        <div id="connectionStatus" class="status-loading">Verificando conexión...</div>
+    <header class="sticky-header">
+        <div class="sticky-header-inner">
+            <h1>LogTrack de Irvin.</h1>
+            <div id="connectionStatus" class="status-loading">Verificando conexión...</div>
+        </div>
     </header>
 
-    <div class="grid-2">
-        <!-- NUEVO REGISTRO -->
+    <div class="grid-2" style="margin-top: 8px;">
         <div class="card">
-            <h2>  Nuevo Registro</h2>
+            <h2>Nuevo Registro</h2>
             <div class="form-group">
                 <label>Selecciona Fecha</label>
                 <input type="date" id="dateInput">
@@ -173,15 +204,14 @@
                     <span id="dayEstimate" style="font-size:1.25rem; color:var(--primary); font-weight:bold;">$0.00</span>
                     <div style="font-size:0.78rem; color:#666; margin-top:4px;">Solo minutos en llamada × $0.10</div>
                 </div>
-                <button id="btnSave" onclick="saveLog()">  Guardar Registro</button>
+                <button id="btnSave" onclick="saveLog()">Guardar Registro</button>
                 <div id="saveFeedback" class="hidden" style="margin-top:12px;"></div>
             </div>
         </div>
 
-        <!-- CONCILIACIÓN DE PAGOS -->
         <div class="card">
             <h2>
-                  Conciliación de Pagos
+                Conciliación de Pagos
                 <div class="switch-container">
                     <span>General</span>
                     <label class="switch">
@@ -193,7 +223,9 @@
             </h2>
             <div class="form-group">
                 <label>Selecciona uno o varios meses</label>
-                <div class="month-chips" id="monthChips"></div>
+                <div class="month-chips" id="monthChips">
+                    <span style="font-size:0.85rem; color:#666;">Cargando meses con datos...</span>
+                </div>
             </div>
             <div id="paySummaryGeneral">
                 <div class="grid-2">
@@ -228,10 +260,9 @@
         </div>
     </div>
 
-    <!-- REPORTES -->
     <div class="card" id="reportsCard">
         <h2>
-              Reportes y Tendencias
+            Reportes y Tendencias
             <div class="switch-container">
                 <span>General</span>
                 <label class="switch">
@@ -260,11 +291,11 @@
                 <span class="stat-val" id="avgTime">0m</span>
                 <span class="stat-label">Tiempo Promedio/Llamada</span>
             </div>
-            <div class="stat-box" style="background:var(--dark); color:white; cursor:default;" id="kpiMoney">
+            <div class="stat-box" style="background:var(--dark); color:white;" id="kpiMoney" onclick="setChartMode('earnings')">
                 <span class="stat-val" style="color:white;" id="totalMoney">$0.00</span>
                 <span class="stat-label" style="color:#ccc;">Ganancia Total (Est.)</span>
             </div>
-            <div class="stat-box hidden" id="kpiDiff" style="cursor:default;">
+            <div class="stat-box hidden" id="kpiDiff" onclick="setChartMode('diff')">
                 <span class="stat-val" id="totalDiff">0</span>
                 <span class="stat-label">Diferencia Neta (min)</span>
                 <div class="stat-sub">Conectado − Llamada</div>
@@ -299,6 +330,10 @@
             </table>
         </div>
     </div>
+
+    <footer class="site-footer">
+        <p>&copy; 2025 Irvin Prado. <em>Ascende Superius – Seek Higher Things</em></p>
+    </footer>
 </div>
 
 <script>
@@ -318,10 +353,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const lastWeek = new Date();
     lastWeek.setDate(lastWeek.getDate() - 7);
     document.getElementById('filterStart').value = lastWeek.toISOString().split('T')[0];
-    buildMonthChips();
     await checkConnection();
     await handleDateSelect();
     await loadReports();
+    await buildMonthChipsFromData();
 });
 
 async function checkConnection() {
@@ -330,10 +365,10 @@ async function checkConnection() {
     el.className = 'status-loading';
     try {
         const res = await fetch('/api/logs?start=2099-01-01&end=2099-01-02');
-        if (res.ok) { el.textContent = '  Conectado a la base de datos'; el.className = 'status-ok'; }
+        if (res.ok) { el.textContent = '✅ Conectado a la base de datos'; el.className = 'status-ok'; }
         else throw new Error('No OK');
     } catch (e) {
-        el.textContent = '  Error de conexión';
+        el.textContent = '❌ Error de conexión';
         el.className = 'status-error';
     }
 }
@@ -368,19 +403,36 @@ async function handleDateSelect() {
 
 function calculateDayEstimate() {
     const callMins = parseFloat(document.getElementById('callMinutes').value) || 0;
-    const estimated = callMins * RATE; // SOLO minutos en llamada
+    const estimated = callMins * RATE;
     document.getElementById('dayEstimate').innerText = `$${estimated.toFixed(2)}`;
     return { callMins, estimated };
 }
 
 async function saveLog() {
     const date = document.getElementById('dateInput').value;
-    if (!date) return alert('Selecciona una fecha');
-    const callMins = parseFloat(document.getElementById('callMinutes').value) || 0;
-    const totalCalls = parseInt(document.getElementById('totalCalls').value) || 0;
-    const availH = parseFloat(document.getElementById('availHours').value) || 0;
-    const availM = parseFloat(document.getElementById('availMins').value) || 0;
+    const callMinsRaw = document.getElementById('callMinutes').value;
+    const totalCallsRaw = document.getElementById('totalCalls').value;
+    const availHRaw = document.getElementById('availHours').value;
+    const availMRaw = document.getElementById('availMins').value;
+
+    const missing = [];
+    if (!date) missing.push('Fecha');
+    if (callMinsRaw === '' || callMinsRaw === null) missing.push('Minutos en Llamada');
+    if (totalCallsRaw === '' || totalCallsRaw === null) missing.push('Llamadas Totales');
+    if (availHRaw === '' || availHRaw === null) missing.push('Horas disponibles');
+    if (availMRaw === '' || availMRaw === null) missing.push('Minutos disponibles');
+
+    if (missing.length > 0) {
+        showFeedback(`⚠️ Faltan campos por completar: <strong>${missing.join(', ')}</strong>`, false);
+        return;
+    }
+
+    const callMins = parseFloat(callMinsRaw) || 0;
+    const totalCalls = parseInt(totalCallsRaw) || 0;
+    const availH = parseFloat(availHRaw) || 0;
+    const availM = parseFloat(availMRaw) || 0;
     const totalAvailMins = (availH * 60) + availM;
+
     const btn = document.getElementById('btnSave');
     btn.disabled = true; btn.textContent = 'Guardando...';
     try {
@@ -393,9 +445,10 @@ async function saveLog() {
         if (res.ok && result.success) {
             showFeedback(`✅ Guardado. Ganancia: $${(result.earnings_estimated || 0).toFixed(2)}`, true);
             await loadReports();
+            await buildMonthChipsFromData();
         } else showFeedback(`❌ Error: ${result.error || 'No se pudo guardar'}`, false);
     } catch (e) { showFeedback('❌ Error de red', false); }
-    finally { btn.disabled = false; btn.textContent = '💾 Guardar Registro'; }
+    finally { btn.disabled = false; btn.textContent = 'Guardar Registro'; }
 }
 
 function showFeedback(msg, ok) {
@@ -491,7 +544,7 @@ function renderTable(data) {
                 <td>${avg} min</td><td>$${ganCall}</td><td>$${ganLog}</td>`;
         } else {
             tr.innerHTML = `<td>${row.date}</td><td>${call}</td><td>${calls}</td><td>${avail}</td>
-                <td>${avg} min</td><td>$${(row.earnings_estimated || 0).toFixed(2)}</td>`;
+                <td>${avg} min</td><td>$${(call * RATE).toFixed(2)}</td>`;
         }
         tbody.appendChild(tr);
     });
@@ -500,9 +553,13 @@ function renderTable(data) {
 function setChartMode(mode) {
     if (chartMode === mode && mode !== 'default') chartMode = 'default';
     else chartMode = mode;
+
     document.getElementById('kpiCallMins').classList.toggle('active', chartMode === 'default');
     document.getElementById('kpiCalls').classList.toggle('active', chartMode === 'calls');
     document.getElementById('kpiAvg').classList.toggle('active', chartMode === 'avg');
+    document.getElementById('kpiMoney').classList.toggle('active', chartMode === 'earnings');
+    document.getElementById('kpiDiff').classList.toggle('active', chartMode === 'diff');
+
     renderChart(currentLogs);
 }
 
@@ -512,27 +569,95 @@ function renderChart(data) {
     const sorted = [...data].sort((a,b) => new Date(a.date) - new Date(b.date));
     const labels = sorted.map(d => d.date);
     let datasets = [], yTitle = '';
+
     if (chartMode === 'calls') {
-        datasets = [{ label: 'Llamadas por día', data: sorted.map(d => d.total_calls || 0), borderColor: '#0056b3', backgroundColor: 'rgba(0,86,179,0.15)', tension: 0.3, fill: true }];
+        datasets = [{
+            label: 'Llamadas por día',
+            data: sorted.map(d => d.total_calls || 0),
+            borderColor: '#0056b3', backgroundColor: 'rgba(0,86,179,0.15)', tension: 0.3, fill: true
+        }];
         yTitle = 'Cantidad de llamadas';
     } else if (chartMode === 'avg') {
-        datasets = [{ label: 'Promedio min/llamada', data: sorted.map(d => { const c = d.total_calls || 0; return c > 0 ? +(d.call_minutes / c).toFixed(1) : 0; }), borderColor: '#6f42c1', backgroundColor: 'rgba(111,66,193,0.15)', tension: 0.3, fill: true }];
+        datasets = [{
+            label: 'Promedio min/llamada',
+            data: sorted.map(d => {
+                const c = d.total_calls || 0;
+                return c > 0 ? +(d.call_minutes / c).toFixed(1) : 0;
+            }),
+            borderColor: '#6f42c1', backgroundColor: 'rgba(111,66,193,0.15)', tension: 0.3, fill: true
+        }];
         yTitle = 'Minutos promedio';
+    } else if (chartMode === 'earnings') {
+        datasets = [
+            {
+                label: 'Ganancia por Min. Llamada ($)',
+                data: sorted.map(d => +((d.call_minutes || 0) * RATE).toFixed(2)),
+                borderColor: '#0056b3', backgroundColor: 'rgba(0,86,179,0.1)', tension: 0.3, fill: true
+            },
+            {
+                label: 'Ganancia por Min. Logueado ($)',
+                data: sorted.map(d => +((d.available_minutes || 0) * RATE).toFixed(2)),
+                borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.1)', tension: 0.3, fill: true
+            }
+        ];
+        yTitle = 'USD ($)';
+    } else if (chartMode === 'diff') {
+        datasets = [
+            {
+                label: 'Diferencia (Disponible − Llamada) min',
+                data: sorted.map(d => (d.available_minutes || 0) - (d.call_minutes || 0)),
+                borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.12)', tension: 0.3, fill: true
+            },
+            {
+                label: '% del día en espera',
+                data: sorted.map(d => {
+                    const avail = d.available_minutes || 0;
+                    if (avail === 0) return 0;
+                    return +(((avail - (d.call_minutes || 0)) / avail) * 100).toFixed(1);
+                }),
+                borderColor: '#fd7e14', backgroundColor: 'rgba(253,126,20,0.1)', tension: 0.3, fill: false,
+                yAxisID: 'y1'
+            }
+        ];
+        yTitle = 'Minutos / %';
     } else {
         datasets = [
-            { label: 'Minutos en Llamada', data: sorted.map(d => d.call_minutes || 0), borderColor: '#0056b3', backgroundColor: 'rgba(0,86,179,0.1)', tension: 0.3, fill: true },
-            { label: 'Tiempo Disponible (conexión)', data: sorted.map(d => d.available_minutes || 0), borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.1)', tension: 0.3, fill: true }
+            {
+                label: 'Minutos en Llamada',
+                data: sorted.map(d => d.call_minutes || 0),
+                borderColor: '#0056b3', backgroundColor: 'rgba(0,86,179,0.1)', tension: 0.3, fill: true
+            },
+            {
+                label: 'Tiempo Disponible (conexión)',
+                data: sorted.map(d => d.available_minutes || 0),
+                borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.1)', tension: 0.3, fill: true
+            }
         ];
         yTitle = 'Minutos';
     }
+
+    const scales = {
+        y: { beginAtZero: true, title: { display: true, text: yTitle } }
+    };
+    if (chartMode === 'diff') {
+        scales.y1 = {
+            position: 'right',
+            beginAtZero: true,
+            max: 100,
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: '% espera' }
+        };
+    }
+
     chartInstance = new Chart(ctx, {
         type: 'line',
         data: { labels, datasets },
         options: {
-            responsive: true, maintainAspectRatio: false,
+            responsive: true,
+            maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: { legend: { position: 'top' } },
-            scales: { y: { beginAtZero: true, title: { display: true, text: yTitle } } }
+            scales
         }
     });
 }
@@ -540,31 +665,62 @@ function renderChart(data) {
 function toggleReportDetail() {
     isReportDetail = document.getElementById('reportDetailSwitch').checked;
     document.getElementById('kpiDiff').classList.toggle('hidden', !isReportDetail);
+    if (!isReportDetail && chartMode === 'diff') {
+        chartMode = 'default';
+        document.getElementById('kpiDiff').classList.remove('active');
+        document.getElementById('kpiCallMins').classList.add('active');
+    }
     renderTable(currentLogs);
+    renderChart(currentLogs);
 }
 
-function buildMonthChips() {
+async function buildMonthChipsFromData() {
     const container = document.getElementById('monthChips');
-    container.innerHTML = '';
-    const now = new Date();
-    for (let i = 0; i < 6; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        const label = d.toLocaleString('es', { month: 'short', year: 'numeric' });
-        const chip = document.createElement('div');
-        chip.className = 'month-chip';
-        chip.textContent = label;
-        chip.dataset.month = val;
-        chip.onclick = () => {
-            chip.classList.toggle('selected');
-            if (chip.classList.contains('selected')) selectedMonths.add(val);
-            else selectedMonths.delete(val);
-            loadPaymentComparison();
-        };
-        if (i === 0) { chip.classList.add('selected'); selectedMonths.add(val); }
-        container.appendChild(chip);
+    container.innerHTML = '<span style="font-size:0.85rem;color:#666;">Cargando...</span>';
+
+    try {
+        const res = await fetch('/api/logs?start=2020-01-01&end=2030-12-31');
+        const logs = await res.json();
+        if (!Array.isArray(logs) || logs.length === 0) {
+            container.innerHTML = '<span style="font-size:0.85rem;color:#666;">Sin datos aún</span>';
+            return;
+        }
+
+        const monthsSet = new Set();
+        logs.forEach(l => {
+            if (l.date) monthsSet.add(l.date.slice(0, 7));
+        });
+
+        const months = [...monthsSet].sort().reverse();
+        container.innerHTML = '';
+        selectedMonths.clear();
+
+        months.forEach((val, idx) => {
+            const [y, m] = val.split('-');
+            const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+            const label = d.toLocaleString('es', { month: 'short', year: 'numeric' });
+            const chip = document.createElement('div');
+            chip.className = 'month-chip';
+            chip.textContent = label;
+            chip.dataset.month = val;
+            chip.onclick = () => {
+                chip.classList.toggle('selected');
+                if (chip.classList.contains('selected')) selectedMonths.add(val);
+                else selectedMonths.delete(val);
+                loadPaymentComparison();
+            };
+            if (idx === 0) {
+                chip.classList.add('selected');
+                selectedMonths.add(val);
+            }
+            container.appendChild(chip);
+        });
+
+        loadPaymentComparison();
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<span style="font-size:0.85rem;color:#666;">Error al cargar meses</span>';
     }
-    loadPaymentComparison();
 }
 
 function togglePayDetail() {
@@ -679,9 +835,18 @@ function exportExcel() {
             'Llamadas': r.total_calls || 0,
             'Disponible': r.available_minutes || 0,
             'Promedio': r.total_calls > 0 ? +((r.call_minutes / r.total_calls).toFixed(1)) : 0,
-            'Ganancia': +(r.earnings_estimated || 0).toFixed(2)
+            'Ganancia': +((r.call_minutes || 0) * RATE).toFixed(2)
         }));
     }
+
+    const tMins = currentLogs.reduce((s,d) => s + (d.call_minutes||0), 0);
+    const tCalls = currentLogs.reduce((s,d) => s + (d.total_calls||0), 0);
+    const tAvail = currentLogs.reduce((s,d) => s + (d.available_minutes||0), 0);
+    rows.push({});
+    rows.push({ Fecha: 'RESUMEN', 'Min. Llamada': tMins, 'Llamadas': tCalls, 'Disponible': tAvail });
+    rows.push({ Fecha: 'Ganancia Total (Llamada)', 'Min. Llamada': +(tMins * RATE).toFixed(2) });
+    rows.push({ Fecha: '© 2025 Irvin Prado. Ascende Superius – Seek Higher Things' });
+
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Reporte");
@@ -694,19 +859,14 @@ function exportPDF() {
     const doc = new jsPDF('p', 'mm', 'a4');
     const start = document.getElementById('filterStart').value;
     const end = document.getElementById('filterEnd').value;
+
     doc.setFontSize(16);
-    doc.text('Reporte de Actividad en Propio - LogTrack | Irvin Prado', 14, 18);
+    doc.text('Reporte de Actividad - LogTrack | Irvin Prado', 14, 18);
     doc.setFontSize(10);
     doc.setTextColor(80);
-    doc.text(`Entre las fechas: ${start} → ${end}  |  Tipo de vista: ${isReportDetail ? 'Detallada' : 'General'}`, 14, 25);
+    doc.text(`Entre las fechas: ${start} - ${end}  |  Tipo de vista: ${isReportDetail ? 'Detallada' : 'General'}`, 14, 25);
     doc.setTextColor(0);
-    let y = 32;
-    doc.setFontSize(11);
-    doc.text(`Minutos en llamada: ${document.getElementById('totalMins').innerText}`, 14, y);
-    doc.text(`Llamadas: ${document.getElementById('totalCallsStat').innerText}`, 90, y);
-    y += 6;
-    doc.text(`Promedio/llamada: ${document.getElementById('avgTime').innerText}`, 14, y);
-    doc.text(`Ganancia estimada: ${document.getElementById('totalMoney').innerText}`, 90, y);
+
     const head = isReportDetail
         ? [['Fecha','Min.Llam','#Llam','Dispon.','Difer.','Prom.','Gan.Llam','Gan.Log']]
         : [['Fecha','Min.Llam','#Llam','Dispon.','Promedio','Ganancia']];
@@ -716,9 +876,50 @@ function exportPDF() {
         const avail = r.available_minutes || 0;
         const avg = calls > 0 ? (call/calls).toFixed(1) : '0';
         if (isReportDetail) return [r.date, call, calls, avail, avail-call, avg, (call*RATE).toFixed(2), (avail*RATE).toFixed(2)];
-        return [r.date, call, calls, avail, avg, (r.earnings_estimated||0).toFixed(2)];
+        return [r.date, call, calls, avail, avg, (call*RATE).toFixed(2)];
     });
-    doc.autoTable({ head, body, startY: y + 8, styles: { fontSize: 8 }, headStyles: { fillColor: [0, 51, 102] } });
+
+    doc.autoTable({
+        head, body,
+        startY: 30,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [0, 51, 102] }
+    });
+
+    let y = doc.lastAutoTable.finalY + 12;
+    doc.setFontSize(12);
+    doc.setTextColor(0, 51, 102);
+    doc.text('Resumen de estadísticas', 14, y);
+    doc.setTextColor(0);
+    y += 8;
+    doc.setFontSize(10);
+
+    const tMins = document.getElementById('totalMins').innerText;
+    const tCalls = document.getElementById('totalCallsStat').innerText;
+    const avgT = document.getElementById('avgTime').innerText;
+    const tMoney = document.getElementById('totalMoney').innerText;
+    const tDiff = document.getElementById('totalDiff').innerText;
+    const variation = document.getElementById('dailyVariation').innerText;
+    const overtime = document.getElementById('overtimeVal').innerText;
+
+    doc.text(`Minutos en llamada: ${tMins}`, 14, y);
+    doc.text(`Llamadas totales: ${tCalls}`, 100, y);
+    y += 6;
+    doc.text(`Promedio por llamada: ${avgT}`, 14, y);
+    doc.text(`Ganancia estimada: ${tMoney}`, 100, y);
+    y += 6;
+    if (isReportDetail) {
+        doc.text(`Diferencia neta (min): ${tDiff}`, 14, y);
+        y += 6;
+    }
+    doc.text(`Variación diaria: ${variation}`, 14, y);
+    doc.text(`Meta 6h: ${overtime}`, 100, y);
+
+    y += 14;
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text('© 2025 Irvin Prado. Ascende Superius – Seek Higher Things', 14, y);
+
     doc.save(`LogTrack_${start}_${end}.pdf`);
 }
 </script>
