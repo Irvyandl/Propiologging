@@ -1,0 +1,927 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogTrack de Irvin</title>
+    <link rel="icon" href="https://raw.githubusercontent.com/Irvyandl/VirtualAssistance/refs/heads/main/logo.ico" type="image/x-icon">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #0056b3;
+            --dark: #003366;
+            --light: #e6f0fa;
+            --white: #ffffff;
+            --text: #333333;
+            --border: #ddeeff;
+            --success: #28a745;
+            --danger: #dc3545;
+        }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            background: var(--white); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 0 16px 40px; 
+        }
+        .app-container { max-width: 1200px; margin: 0 auto; display: grid; gap: 24px; }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--light);
+            padding: 14px 0;
+            margin: 0 -16px;
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        .sticky-header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        h1 { color: var(--dark); margin: 0; font-size: 1.6rem; }
+        h2 { 
+            color: var(--primary); font-size: 1.15rem; margin: 0 0 16px 0; 
+            border-bottom: 1px solid var(--border); padding-bottom: 8px; 
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+        }
+        .card { 
+            border: 1px solid var(--border); border-radius: 12px; padding: 20px; 
+            background: var(--white); box-shadow: 0 4px 12px rgba(0,51,102,0.05); 
+        }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { 
+            .grid-2 { grid-template-columns: 1fr; }
+            body { padding: 0 12px 40px; }
+            .sticky-header { margin: 0 -12px; padding-left: 12px; padding-right: 12px; }
+            .card { padding: 16px; }
+        }
+        .form-group { margin-bottom: 14px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--dark); font-size: 0.9rem; }
+        input, select { 
+            width: 100%; padding: 11px; border: 1px solid #ccc; border-radius: 6px; 
+            font-size: 1rem; transition: border 0.2s; 
+        }
+        input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--light); }
+        button { 
+            background: var(--primary); color: white; border: none; padding: 11px 20px; 
+            border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.2s; font-size: 0.95rem;
+        }
+        button:hover { background: var(--dark); }
+        button.outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        button.outline:hover { background: var(--light); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .stats-grid { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+            gap: 12px; margin-top: 12px; 
+        }
+        .stat-box { 
+            background: var(--light); padding: 14px; border-radius: 10px; text-align: center; 
+            cursor: pointer; transition: all 0.2s; border: 2px solid transparent; user-select: none;
+        }
+        .stat-box:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,86,179,0.15); }
+        .stat-box.active { border-color: var(--primary); background: #d6e9ff; }
+        .stat-val { font-size: 1.4rem; font-weight: bold; color: var(--dark); display: block; }
+        .stat-label { font-size: 0.8rem; color: var(--text); margin-top: 2px; }
+        .stat-sub { font-size: 0.75rem; color: #666; margin-top: 4px; }
+
+        .switch-container {
+            display: flex; align-items: center; gap: 10px; background: var(--light);
+            padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+        }
+        .switch { position: relative; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background: #ccc; transition: .3s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px;
+            left: 3px; bottom: 3px; background: white; transition: .3s; border-radius: 50%;
+        }
+        input:checked + .slider { background: var(--primary); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.9rem; }
+        th { background: var(--dark); color: white; padding: 10px 8px; text-align: left; font-size: 0.85rem; white-space: nowrap; }
+        td { padding: 10px 8px; border-bottom: 1px solid var(--border); }
+        tr:hover { background: var(--light); }
+        .table-wrap { overflow-x: auto; }
+
+        .hidden { display: none !important; }
+        .alert { padding: 12px 14px; border-radius: 8px; margin-top: 12px; font-weight: 500; font-size: 0.9rem; }
+        .alert-good { background: #d4edda; color: #155724; }
+        .alert-bad { background: #f8d7da; color: #721c24; }
+        .alert-info { background: #d1ecf1; color: #0c5460; }
+
+        #connectionStatus { font-size: 0.8rem; padding: 5px 12px; border-radius: 20px; background: var(--light); }
+        .status-ok { color: #155724; background: #d4edda !important; }
+        .status-error { color: #721c24; background: #f8d7da !important; }
+        .status-loading { color: #856404; background: #fff3cd !important; }
+
+        .meta-bar { background: #eee; border-radius: 8px; height: 10px; margin-top: 6px; overflow: hidden; }
+        .meta-fill { height: 100%; background: var(--success); border-radius: 8px; transition: width 0.4s; }
+        .meta-fill.over { background: #17a2b8; }
+
+        .month-chips { 
+            display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; 
+            justify-content: center;
+        }
+        .month-chip {
+            padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
+            background: var(--white); cursor: pointer; font-size: 0.85rem; transition: all 0.2s;
+        }
+        .month-chip.selected { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .chart-container { position: relative; height: 300px; margin-top: 20px; }
+        .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+        @media (max-width: 600px) { .kpi-row { grid-template-columns: 1fr; } }
+        .export-btns { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 20px; }
+
+        .site-footer {
+            text-align: center;
+            padding: 24px 16px;
+            margin-top: 20px;
+            border-top: 1px solid var(--border);
+            font-size: 0.9rem;
+            color: #555;
+        }
+        .site-footer em { color: var(--dark); }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <header class="sticky-header">
+        <div class="sticky-header-inner">
+            <h1>LogTrack de Irvin.</h1>
+            <div id="connectionStatus" class="status-loading">Verificando conexión...</div>
+        </div>
+    </header>
+
+    <div class="grid-2" style="margin-top: 8px;">
+        <div class="card">
+            <h2>Nuevo Registro</h2>
+            <div class="form-group">
+                <label>Selecciona Fecha</label>
+                <input type="date" id="dateInput">
+            </div>
+            <div id="dataForm" class="hidden">
+                <div class="grid-2" style="gap:10px;">
+                    <div class="form-group">
+                        <label>Minutos en Llamada</label>
+                        <input type="number" id="callMinutes" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Llamadas Totales</label>
+                        <input type="number" id="totalCalls" placeholder="0" min="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Tiempo Disponible Total (en línea)</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="number" id="availHours" placeholder="Horas" min="0">
+                        <input type="number" id="availMins" placeholder="Min" min="0" max="59">
+                    </div>
+                </div>
+                <div style="background:var(--light); padding:12px; border-radius:8px; margin-bottom:14px; font-size:0.9rem;">
+                    <strong>Ganancia Estimada del Día:</strong>
+                    <span id="dayEstimate" style="font-size:1.25rem; color:var(--primary); font-weight:bold;">$0.00</span>
+                    <div style="font-size:0.78rem; color:#666; margin-top:4px;">Solo minutos en llamada × $0.10</div>
+                </div>
+                <button id="btnSave" onclick="saveLog()">Guardar Registro</button>
+                <div id="saveFeedback" class="hidden" style="margin-top:12px;"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>
+                Conciliación de Pagos
+                <div class="switch-container">
+                    <span>General</span>
+                    <label class="switch">
+                        <input type="checkbox" id="payDetailSwitch" onchange="togglePayDetail()">
+                        <span class="slider"></span>
+                    </label>
+                    <span>Detallado</span>
+                </div>
+            </h2>
+            <div class="form-group">
+                <label>Selecciona uno o varios meses</label>
+                <div class="month-chips" id="monthChips">
+                    <span style="font-size:0.85rem; color:#666;">Cargando meses con datos...</span>
+                </div>
+            </div>
+            <div id="paySummaryGeneral">
+                <div class="grid-2">
+                    <div class="stat-box" style="cursor:default;">
+                        <span class="stat-label">Estimado (solo llamadas)</span>
+                        <span class="stat-val" id="calcEarnings">$0.00</span>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:0.8rem; text-align:center;">Pago Real Recibido ($)</label>
+                        <input type="number" id="realPayment" placeholder="0.00" step="0.01" style="text-align:center; font-weight:bold; color:var(--primary);">
+                    </div>
+                </div>
+            </div>
+            <div id="paySummaryDetail" class="hidden">
+                <div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr;">
+                    <div class="stat-box" style="cursor:default;">
+                        <span class="stat-label">Calc A (Llamadas)</span>
+                        <span class="stat-val" id="calcA" style="font-size:1.2rem;">$0.00</span>
+                    </div>
+                    <div class="stat-box" style="cursor:default;">
+                        <span class="stat-label">Calc B (Logueado)</span>
+                        <span class="stat-val" id="calcB" style="font-size:1.2rem;">$0.00</span>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:0.75rem; text-align:center;">Pago Real ($)</label>
+                        <input type="number" id="realPaymentDetail" placeholder="0.00" step="0.01" style="text-align:center; font-weight:bold; color:var(--primary);">
+                    </div>
+                </div>
+            </div>
+            <button class="outline" style="width:100%; margin-top:14px;" onclick="savePayment()">Verificar Discrepancia</button>
+            <div id="discrepancyBox" class="hidden"></div>
+        </div>
+    </div>
+
+    <div class="card" id="reportsCard">
+        <h2>
+            Reportes y Tendencias
+            <div class="switch-container">
+                <span>General</span>
+                <label class="switch">
+                    <input type="checkbox" id="reportDetailSwitch" onchange="toggleReportDetail()">
+                    <span class="slider"></span>
+                </label>
+                <span>Detallado</span>
+            </div>
+        </h2>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+            <input type="date" id="filterStart">
+            <input type="date" id="filterEnd">
+            <button onclick="loadReports()">Filtrar</button>
+        </div>
+
+        <div class="stats-grid" id="kpiGrid">
+            <div class="stat-box" id="kpiCallMins" onclick="setChartMode('default')">
+                <span class="stat-val" id="totalMins">0</span>
+                <span class="stat-label">Minutos en Llamada</span>
+            </div>
+            <div class="stat-box" id="kpiCalls" onclick="setChartMode('calls')">
+                <span class="stat-val" id="totalCallsStat">0</span>
+                <span class="stat-label">Llamadas Totales</span>
+            </div>
+            <div class="stat-box" id="kpiAvg" onclick="setChartMode('avg')">
+                <span class="stat-val" id="avgTime">0m</span>
+                <span class="stat-label">Tiempo Promedio/Llamada</span>
+            </div>
+            <div class="stat-box" style="background:var(--dark); color:white;" id="kpiMoney" onclick="setChartMode('earnings')">
+                <span class="stat-val" style="color:white;" id="totalMoney">$0.00</span>
+                <span class="stat-label" style="color:#ccc;">Ganancia Total (Est.)</span>
+            </div>
+            <div class="stat-box hidden" id="kpiDiff" onclick="setChartMode('diff')">
+                <span class="stat-val" id="totalDiff">0</span>
+                <span class="stat-label">Diferencia Neta (min)</span>
+                <div class="stat-sub">Conectado − Llamada</div>
+            </div>
+        </div>
+
+        <div class="kpi-row">
+            <div class="stat-box" style="cursor:default; text-align:left;">
+                <span class="stat-label">Variación Diaria (Conectado vs Llamada)</span>
+                <span class="stat-val" id="dailyVariation" style="font-size:1.3rem;">—</span>
+                <div class="stat-sub" id="dailyVariationNote">Comparado con el día anterior</div>
+            </div>
+            <div class="stat-box" style="cursor:default; text-align:left;">
+                <span class="stat-label">Meta Diaria: 6 horas (360 min)</span>
+                <span class="stat-val" id="overtimeVal" style="font-size:1.3rem;">—</span>
+                <div class="meta-bar"><div class="meta-fill" id="metaFill" style="width:0%"></div></div>
+                <div class="stat-sub" id="overtimeNote">Tiempo extra / déficit sobre meta</div>
+            </div>
+        </div>
+
+        <div class="chart-container"><canvas id="trendsChart"></canvas></div>
+
+        <div class="export-btns">
+            <button class="outline" onclick="exportPDF()">📄 PDF</button>
+            <button class="outline" onclick="exportExcel()">📊 Excel</button>
+        </div>
+
+        <div class="table-wrap">
+            <table id="reportTable">
+                <thead><tr id="tableHead"></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <p>&copy; 2025 Irvin Prado. <em>Ascende Superius – Seek Higher Things</em></p>
+    </footer>
+</div>
+
+<script>
+const RATE = 0.10;
+const META_MINUTES = 360;
+let currentLogs = [];
+let chartInstance = null;
+let chartMode = 'default';
+let isReportDetail = false;
+let isPayDetail = false;
+let selectedMonths = new Set();
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('dateInput').value = today;
+    document.getElementById('filterEnd').value = today;
+    const lastWeek = new Date();
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    document.getElementById('filterStart').value = lastWeek.toISOString().split('T')[0];
+    await checkConnection();
+    await handleDateSelect();
+    await loadReports();
+    await buildMonthChipsFromData();
+});
+
+async function checkConnection() {
+    const el = document.getElementById('connectionStatus');
+    el.textContent = 'Verificando conexión...';
+    el.className = 'status-loading';
+    try {
+        const res = await fetch('/api/logs?start=2099-01-01&end=2099-01-02');
+        if (res.ok) { el.textContent = '✅ Conectado a la base de datos'; el.className = 'status-ok'; }
+        else throw new Error('No OK');
+    } catch (e) {
+        el.textContent = '❌ Error de conexión';
+        el.className = 'status-error';
+    }
+}
+
+document.getElementById('dateInput').addEventListener('change', handleDateSelect);
+
+async function handleDateSelect() {
+    const date = document.getElementById('dateInput').value;
+    if (!date) return;
+    document.getElementById('dataForm').classList.remove('hidden');
+    document.getElementById('saveFeedback').classList.add('hidden');
+    try {
+        const res = await fetch(`/api/logs?start=${date}&end=${date}`);
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+            const log = data[0];
+            document.getElementById('callMinutes').value = log.call_minutes ?? '';
+            document.getElementById('totalCalls').value = log.total_calls ?? '';
+            const totalAvail = log.available_minutes || 0;
+            document.getElementById('availHours').value = Math.floor(totalAvail / 60);
+            document.getElementById('availMins').value = totalAvail % 60;
+        } else {
+            ['callMinutes','totalCalls','availHours','availMins'].forEach(id => document.getElementById(id).value = '');
+        }
+        calculateDayEstimate();
+    } catch (e) { console.error(e); }
+}
+
+['callMinutes','availHours','availMins'].forEach(id => {
+    document.getElementById(id).addEventListener('input', calculateDayEstimate);
+});
+
+function calculateDayEstimate() {
+    const callMins = parseFloat(document.getElementById('callMinutes').value) || 0;
+    const estimated = callMins * RATE;
+    document.getElementById('dayEstimate').innerText = `$${estimated.toFixed(2)}`;
+    return { callMins, estimated };
+}
+
+async function saveLog() {
+    const date = document.getElementById('dateInput').value;
+    const callMinsRaw = document.getElementById('callMinutes').value;
+    const totalCallsRaw = document.getElementById('totalCalls').value;
+    const availHRaw = document.getElementById('availHours').value;
+    const availMRaw = document.getElementById('availMins').value;
+
+    const missing = [];
+    if (!date) missing.push('Fecha');
+    if (callMinsRaw === '' || callMinsRaw === null) missing.push('Minutos en Llamada');
+    if (totalCallsRaw === '' || totalCallsRaw === null) missing.push('Llamadas Totales');
+    if (availHRaw === '' || availHRaw === null) missing.push('Horas disponibles');
+    if (availMRaw === '' || availMRaw === null) missing.push('Minutos disponibles');
+
+    if (missing.length > 0) {
+        showFeedback(`⚠️ Faltan campos por completar: <strong>${missing.join(', ')}</strong>`, false);
+        return;
+    }
+
+    const callMins = parseFloat(callMinsRaw) || 0;
+    const totalCalls = parseInt(totalCallsRaw) || 0;
+    const availH = parseFloat(availHRaw) || 0;
+    const availM = parseFloat(availMRaw) || 0;
+    const totalAvailMins = (availH * 60) + availM;
+
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    try {
+        const res = await fetch('/api/logs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date, call_minutes: callMins, total_calls: totalCalls, available_minutes: totalAvailMins })
+        });
+        const result = await res.json();
+        if (res.ok && result.success) {
+            showFeedback(`✅ Guardado. Ganancia: $${(result.earnings_estimated || 0).toFixed(2)}`, true);
+            await loadReports();
+            await buildMonthChipsFromData();
+        } else showFeedback(`❌ Error: ${result.error || 'No se pudo guardar'}`, false);
+    } catch (e) { showFeedback('❌ Error de red', false); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar Registro'; }
+}
+
+function showFeedback(msg, ok) {
+    const el = document.getElementById('saveFeedback');
+    el.className = ok ? 'alert alert-good' : 'alert alert-bad';
+    el.innerHTML = msg;
+    el.classList.remove('hidden');
+}
+
+async function loadReports() {
+    const start = document.getElementById('filterStart').value;
+    const end = document.getElementById('filterEnd').value;
+    try {
+        const res = await fetch(`/api/logs?start=${start}&end=${end}`);
+        const data = await res.json();
+        currentLogs = Array.isArray(data) ? data : [];
+        updateSummary(currentLogs);
+        renderTable(currentLogs);
+        renderChart(currentLogs);
+        updateVariationAndMeta(currentLogs);
+    } catch (e) { console.error(e); currentLogs = []; }
+}
+
+function updateSummary(data) {
+    let tMins = 0, tCalls = 0, tMoney = 0, tAvail = 0;
+    data.forEach(d => {
+        tMins += (d.call_minutes || 0);
+        tCalls += (d.total_calls || 0);
+        tMoney += (d.call_minutes || 0) * RATE;
+        tAvail += (d.available_minutes || 0);
+    });
+    document.getElementById('totalMins').innerText = tMins;
+    document.getElementById('totalCallsStat').innerText = tCalls;
+    document.getElementById('totalMoney').innerText = `$${tMoney.toFixed(2)}`;
+    document.getElementById('avgTime').innerText = tCalls > 0 ? `${(tMins / tCalls).toFixed(1)}m` : '0m';
+    document.getElementById('totalDiff').innerText = tAvail - tMins;
+}
+
+function updateVariationAndMeta(data) {
+    const sorted = [...data].sort((a,b) => new Date(a.date) - new Date(b.date));
+    if (sorted.length >= 2) {
+        const last = sorted[sorted.length - 1];
+        const prev = sorted[sorted.length - 2];
+        const lastRatio = last.available_minutes > 0 ? ((last.available_minutes - last.call_minutes) / last.available_minutes) * 100 : 0;
+        const prevRatio = prev.available_minutes > 0 ? ((prev.available_minutes - prev.call_minutes) / prev.available_minutes) * 100 : 0;
+        const delta = lastRatio - prevRatio;
+        const el = document.getElementById('dailyVariation');
+        el.innerText = `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%`;
+        el.style.color = delta > 0 ? 'var(--danger)' : 'var(--success)';
+        document.getElementById('dailyVariationNote').innerText = `Diferencia de tiempo no productivo: ${last.date} vs ${prev.date}`;
+    } else {
+        document.getElementById('dailyVariation').innerText = '—';
+        document.getElementById('dailyVariationNote').innerText = 'Se necesitan al menos 2 días';
+    }
+    if (sorted.length > 0) {
+        const avgAvail = sorted.reduce((s,d) => s + (d.available_minutes||0), 0) / sorted.length;
+        const extra = avgAvail - META_MINUTES;
+        const pct = Math.min(100, (avgAvail / META_MINUTES) * 100);
+        document.getElementById('overtimeVal').innerText = extra >= 0 ? `+${Math.round(extra)} min extra` : `${Math.round(extra)} min`;
+        document.getElementById('overtimeVal').style.color = extra >= 0 ? 'var(--success)' : 'var(--danger)';
+        const fill = document.getElementById('metaFill');
+        fill.style.width = `${pct}%`;
+        fill.className = 'meta-fill' + (extra >= 0 ? ' over' : '');
+        document.getElementById('overtimeNote').innerText = `Promedio diario: ${Math.round(avgAvail)} min (meta ${META_MINUTES} min)`;
+    }
+}
+
+function renderTable(data) {
+    const tbody = document.querySelector('#reportTable tbody');
+    const thead = document.getElementById('tableHead');
+    tbody.innerHTML = '';
+    if (isReportDetail) {
+        thead.innerHTML = `<th>Fecha</th><th>Min. Llamada</th><th># Llamadas</th><th>Disponible</th><th>Diferencia</th><th>Promedio</th><th>Gan. Llamada</th><th>Gan. Logueado</th>`;
+    } else {
+        thead.innerHTML = `<th>Fecha</th><th>Min. Llamada</th><th># Llamadas</th><th>Disponible</th><th>Promedio</th><th>Ganancia ($)</th>`;
+    }
+    if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="${isReportDetail ? 8 : 6}" style="text-align:center;color:#666;">No hay registros</td></tr>`;
+        return;
+    }
+    data.forEach(row => {
+        const call = row.call_minutes || 0;
+        const calls = row.total_calls || 0;
+        const avail = row.available_minutes || 0;
+        const avg = calls > 0 ? (call / calls).toFixed(1) : '0';
+        const ganCall = (call * RATE).toFixed(2);
+        const ganLog = (avail * RATE).toFixed(2);
+        const diff = avail - call;
+        const tr = document.createElement('tr');
+        if (isReportDetail) {
+            tr.innerHTML = `<td>${row.date}</td><td>${call}</td><td>${calls}</td><td>${avail}</td>
+                <td style="color:${diff > 60 ? 'var(--danger)' : 'inherit'}">${diff}</td>
+                <td>${avg} min</td><td>$${ganCall}</td><td>$${ganLog}</td>`;
+        } else {
+            tr.innerHTML = `<td>${row.date}</td><td>${call}</td><td>${calls}</td><td>${avail}</td>
+                <td>${avg} min</td><td>$${(call * RATE).toFixed(2)}</td>`;
+        }
+        tbody.appendChild(tr);
+    });
+}
+
+function setChartMode(mode) {
+    if (chartMode === mode && mode !== 'default') chartMode = 'default';
+    else chartMode = mode;
+
+    document.getElementById('kpiCallMins').classList.toggle('active', chartMode === 'default');
+    document.getElementById('kpiCalls').classList.toggle('active', chartMode === 'calls');
+    document.getElementById('kpiAvg').classList.toggle('active', chartMode === 'avg');
+    document.getElementById('kpiMoney').classList.toggle('active', chartMode === 'earnings');
+    document.getElementById('kpiDiff').classList.toggle('active', chartMode === 'diff');
+
+    renderChart(currentLogs);
+}
+
+function renderChart(data) {
+    const ctx = document.getElementById('trendsChart').getContext('2d');
+    if (chartInstance) chartInstance.destroy();
+    const sorted = [...data].sort((a,b) => new Date(a.date) - new Date(b.date));
+    const labels = sorted.map(d => d.date);
+    let datasets = [], yTitle = '';
+
+    if (chartMode === 'calls') {
+        datasets = [{
+            label: 'Llamadas por día',
+            data: sorted.map(d => d.total_calls || 0),
+            borderColor: '#0056b3', backgroundColor: 'rgba(0,86,179,0.15)', tension: 0.3, fill: true
+        }];
+        yTitle = 'Cantidad de llamadas';
+    } else if (chartMode === 'avg') {
+        datasets = [{
+            label: 'Promedio min/llamada',
+            data: sorted.map(d => {
+                const c = d.total_calls || 0;
+                return c > 0 ? +(d.call_minutes / c).toFixed(1) : 0;
+            }),
+            borderColor: '#6f42c1', backgroundColor: 'rgba(111,66,193,0.15)', tension: 0.3, fill: true
+        }];
+        yTitle = 'Minutos promedio';
+    } else if (chartMode === 'earnings') {
+        datasets = [
+            {
+                label: 'Ganancia por Min. Llamada ($)',
+                data: sorted.map(d => +((d.call_minutes || 0) * RATE).toFixed(2)),
+                borderColor: '#0056b3', backgroundColor: 'rgba(0,86,179,0.1)', tension: 0.3, fill: true
+            },
+            {
+                label: 'Ganancia por Min. Logueado ($)',
+                data: sorted.map(d => +((d.available_minutes || 0) * RATE).toFixed(2)),
+                borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.1)', tension: 0.3, fill: true
+            }
+        ];
+        yTitle = 'USD ($)';
+    } else if (chartMode === 'diff') {
+        datasets = [
+            {
+                label: 'Diferencia (Disponible − Llamada) min',
+                data: sorted.map(d => (d.available_minutes || 0) - (d.call_minutes || 0)),
+                borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.12)', tension: 0.3, fill: true
+            },
+            {
+                label: '% del día en espera',
+                data: sorted.map(d => {
+                    const avail = d.available_minutes || 0;
+                    if (avail === 0) return 0;
+                    return +(((avail - (d.call_minutes || 0)) / avail) * 100).toFixed(1);
+                }),
+                borderColor: '#fd7e14', backgroundColor: 'rgba(253,126,20,0.1)', tension: 0.3, fill: false,
+                yAxisID: 'y1'
+            }
+        ];
+        yTitle = 'Minutos / %';
+    } else {
+        datasets = [
+            {
+                label: 'Minutos en Llamada',
+                data: sorted.map(d => d.call_minutes || 0),
+                borderColor: '#0056b3', backgroundColor: 'rgba(0,86,179,0.1)', tension: 0.3, fill: true
+            },
+            {
+                label: 'Tiempo Disponible (conexión)',
+                data: sorted.map(d => d.available_minutes || 0),
+                borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.1)', tension: 0.3, fill: true
+            }
+        ];
+        yTitle = 'Minutos';
+    }
+
+    const scales = {
+        y: { beginAtZero: true, title: { display: true, text: yTitle } }
+    };
+    if (chartMode === 'diff') {
+        scales.y1 = {
+            position: 'right',
+            beginAtZero: true,
+            max: 100,
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: '% espera' }
+        };
+    }
+
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'top' } },
+            scales
+        }
+    });
+}
+
+function toggleReportDetail() {
+    isReportDetail = document.getElementById('reportDetailSwitch').checked;
+    document.getElementById('kpiDiff').classList.toggle('hidden', !isReportDetail);
+    if (!isReportDetail && chartMode === 'diff') {
+        chartMode = 'default';
+        document.getElementById('kpiDiff').classList.remove('active');
+        document.getElementById('kpiCallMins').classList.add('active');
+    }
+    renderTable(currentLogs);
+    renderChart(currentLogs);
+}
+
+async function buildMonthChipsFromData() {
+    const container = document.getElementById('monthChips');
+    container.innerHTML = '<span style="font-size:0.85rem;color:#666;">Cargando...</span>';
+
+    try {
+        const res = await fetch('/api/logs?start=2020-01-01&end=2030-12-31');
+        const logs = await res.json();
+        if (!Array.isArray(logs) || logs.length === 0) {
+            container.innerHTML = '<span style="font-size:0.85rem;color:#666;">Sin datos aún</span>';
+            return;
+        }
+
+        const monthsSet = new Set();
+        logs.forEach(l => {
+            if (l.date) monthsSet.add(l.date.slice(0, 7));
+        });
+
+        const months = [...monthsSet].sort().reverse();
+        container.innerHTML = '';
+        selectedMonths.clear();
+
+        months.forEach((val, idx) => {
+            const [y, m] = val.split('-');
+            const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+            const label = d.toLocaleString('es', { month: 'short', year: 'numeric' });
+            const chip = document.createElement('div');
+            chip.className = 'month-chip';
+            chip.textContent = label;
+            chip.dataset.month = val;
+            chip.onclick = () => {
+                chip.classList.toggle('selected');
+                if (chip.classList.contains('selected')) selectedMonths.add(val);
+                else selectedMonths.delete(val);
+                loadPaymentComparison();
+            };
+            if (idx === 0) {
+                chip.classList.add('selected');
+                selectedMonths.add(val);
+            }
+            container.appendChild(chip);
+        });
+
+        loadPaymentComparison();
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<span style="font-size:0.85rem;color:#666;">Error al cargar meses</span>';
+    }
+}
+
+function togglePayDetail() {
+    isPayDetail = document.getElementById('payDetailSwitch').checked;
+    document.getElementById('paySummaryGeneral').classList.toggle('hidden', isPayDetail);
+    document.getElementById('paySummaryDetail').classList.toggle('hidden', !isPayDetail);
+    loadPaymentComparison();
+}
+
+async function loadPaymentComparison() {
+    if (selectedMonths.size === 0) return;
+    let totalCallMins = 0, totalAvailMins = 0;
+    for (const month of selectedMonths) {
+        const [y, m] = month.split('-').map(Number);
+        const lastDay = new Date(y, m, 0).getDate();
+        const start = `${month}-01`;
+        const end = `${month}-${String(lastDay).padStart(2,'0')}`;
+        try {
+            const res = await fetch(`/api/logs?start=${start}&end=${end}`);
+            const logs = await res.json();
+            if (Array.isArray(logs)) {
+                logs.forEach(l => {
+                    totalCallMins += (l.call_minutes || 0);
+                    totalAvailMins += (l.available_minutes || 0);
+                });
+            }
+        } catch (e) { console.error(e); }
+    }
+    const calcA = totalCallMins * RATE;
+    const calcB = totalAvailMins * RATE;
+    document.getElementById('calcEarnings').innerText = `$${calcA.toFixed(2)}`;
+    document.getElementById('calcA').innerText = `$${calcA.toFixed(2)}`;
+    document.getElementById('calcB').innerText = `$${calcB.toFixed(2)}`;
+    const firstMonth = [...selectedMonths][0];
+    try {
+        const resPay = await fetch(`/api/payments?month=${firstMonth}`);
+        const payData = await resPay.json();
+        if (payData && payData.amount_received != null) {
+            document.getElementById('realPayment').value = payData.amount_received;
+            document.getElementById('realPaymentDetail').value = payData.amount_received;
+            calculateDiscrepancy(calcA, calcB, payData.amount_received);
+        } else {
+            document.getElementById('realPayment').value = '';
+            document.getElementById('realPaymentDetail').value = '';
+            document.getElementById('discrepancyBox').classList.add('hidden');
+        }
+    } catch (e) {}
+}
+
+async function savePayment() {
+    if (selectedMonths.size === 0) return alert('Selecciona al menos un mes');
+    const amount = isPayDetail
+        ? parseFloat(document.getElementById('realPaymentDetail').value) || 0
+        : parseFloat(document.getElementById('realPayment').value) || 0;
+    const month = [...selectedMonths][0];
+    try {
+        const res = await fetch('/api/payments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ month_id: month, amount_received: amount, payment_date: new Date().toISOString().split('T')[0] })
+        });
+        const result = await res.json();
+        if (res.ok && result.success) await loadPaymentComparison();
+        else alert('Error: ' + (result.error || 'desconocido'));
+    } catch (e) { alert('Error de red'); }
+}
+
+function calculateDiscrepancy(calcA, calcB, real) {
+    const box = document.getElementById('discrepancyBox');
+    box.classList.remove('hidden', 'alert-good', 'alert-bad', 'alert-info');
+    const diffA = real - calcA;
+    const diffB = real - calcB;
+    if (Math.abs(diffA) < 0.5) {
+        box.innerHTML = `✅ <strong>Coincide con el modelo de Llamadas</strong> (Calc A). El proveedor paga solo por tiempo en llamada.`;
+        box.classList.add('alert-good');
+    } else if (Math.abs(diffB) < 0.5) {
+        box.innerHTML = `✅ <strong>Coincide con el modelo logueado</strong> (Calc B). El proveedor paga por tiempo total conectado.`;
+        box.classList.add('alert-good');
+    } else if (real < Math.min(calcA, calcB)) {
+        const loss = Math.min(calcA, calcB) - real;
+        const minsLost = (loss / RATE).toFixed(0);
+        box.innerHTML = `⚠️ <strong>Déficit de Pago</strong><br>Faltan <strong>$${loss.toFixed(2)}</strong> respecto al modelo más bajo.<br>Equivale a aprox. <strong>${minsLost} minutos</strong> no pagados.`;
+        box.classList.add('alert-bad');
+    } else if (real > Math.max(calcA, calcB)) {
+        const surplus = real - Math.max(calcA, calcB);
+        box.innerHTML = `🎉 <strong>Superávit</strong><br>Te pagaron <strong>$${surplus.toFixed(2)}</strong> por encima del modelo más alto.`;
+        box.classList.add('alert-good');
+    } else {
+        box.innerHTML = `ℹ️ El pago está <strong>entre ambos modelos</strong>.<br>Diferencia vs Llamadas: <strong>$${diffA.toFixed(2)}</strong> | vs Logueado: <strong>$${diffB.toFixed(2)}</strong>`;
+        box.classList.add('alert-info');
+    }
+}
+
+function exportExcel() {
+    if (!currentLogs.length) return alert('No hay datos');
+    let rows;
+    if (isReportDetail) {
+        rows = currentLogs.map(r => ({
+            Fecha: r.date,
+            'Min. Llamada': r.call_minutes || 0,
+            'Llamadas': r.total_calls || 0,
+            'Disponible': r.available_minutes || 0,
+            'Diferencia': (r.available_minutes || 0) - (r.call_minutes || 0),
+            'Promedio': r.total_calls > 0 ? +((r.call_minutes / r.total_calls).toFixed(1)) : 0,
+            'Gan. Llamada': +((r.call_minutes || 0) * RATE).toFixed(2),
+            'Gan. Logueado': +((r.available_minutes || 0) * RATE).toFixed(2)
+        }));
+    } else {
+        rows = currentLogs.map(r => ({
+            Fecha: r.date,
+            'Min. Llamada': r.call_minutes || 0,
+            'Llamadas': r.total_calls || 0,
+            'Disponible': r.available_minutes || 0,
+            'Promedio': r.total_calls > 0 ? +((r.call_minutes / r.total_calls).toFixed(1)) : 0,
+            'Ganancia': +((r.call_minutes || 0) * RATE).toFixed(2)
+        }));
+    }
+
+    const tMins = currentLogs.reduce((s,d) => s + (d.call_minutes||0), 0);
+    const tCalls = currentLogs.reduce((s,d) => s + (d.total_calls||0), 0);
+    const tAvail = currentLogs.reduce((s,d) => s + (d.available_minutes||0), 0);
+    rows.push({});
+    rows.push({ Fecha: 'RESUMEN', 'Min. Llamada': tMins, 'Llamadas': tCalls, 'Disponible': tAvail });
+    rows.push({ Fecha: 'Ganancia Total (Llamada)', 'Min. Llamada': +(tMins * RATE).toFixed(2) });
+    rows.push({ Fecha: '© 2025 Irvin Prado. Ascende Superius – Seek Higher Things' });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+    XLSX.writeFile(wb, `LogTrack_${isReportDetail ? 'Detallado' : 'General'}.xlsx`);
+}
+
+function exportPDF() {
+    if (!currentLogs.length) return alert('No hay datos');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const start = document.getElementById('filterStart').value;
+    const end = document.getElementById('filterEnd').value;
+
+    doc.setFontSize(16);
+    doc.text('Reporte de Actividad - LogTrack | Irvin Prado', 14, 18);
+    doc.setFontSize(10);
+    doc.setTextColor(80);
+    doc.text(`Entre las fechas: ${start} - ${end}  |  Tipo de vista: ${isReportDetail ? 'Detallada' : 'General'}`, 14, 25);
+    doc.setTextColor(0);
+
+    const head = isReportDetail
+        ? [['Fecha','Min.Llam','#Llam','Dispon.','Difer.','Prom.','Gan.Llam','Gan.Log']]
+        : [['Fecha','Min.Llam','#Llam','Dispon.','Promedio','Ganancia']];
+    const body = currentLogs.map(r => {
+        const call = r.call_minutes || 0;
+        const calls = r.total_calls || 0;
+        const avail = r.available_minutes || 0;
+        const avg = calls > 0 ? (call/calls).toFixed(1) : '0';
+        if (isReportDetail) return [r.date, call, calls, avail, avail-call, avg, (call*RATE).toFixed(2), (avail*RATE).toFixed(2)];
+        return [r.date, call, calls, avail, avg, (call*RATE).toFixed(2)];
+    });
+
+    doc.autoTable({
+        head, body,
+        startY: 30,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [0, 51, 102] }
+    });
+
+    let y = doc.lastAutoTable.finalY + 12;
+    doc.setFontSize(12);
+    doc.setTextColor(0, 51, 102);
+    doc.text('Resumen de estadísticas', 14, y);
+    doc.setTextColor(0);
+    y += 8;
+    doc.setFontSize(10);
+
+    const tMins = document.getElementById('totalMins').innerText;
+    const tCalls = document.getElementById('totalCallsStat').innerText;
+    const avgT = document.getElementById('avgTime').innerText;
+    const tMoney = document.getElementById('totalMoney').innerText;
+    const tDiff = document.getElementById('totalDiff').innerText;
+    const variation = document.getElementById('dailyVariation').innerText;
+    const overtime = document.getElementById('overtimeVal').innerText;
+
+    doc.text(`Minutos en llamada: ${tMins}`, 14, y);
+    doc.text(`Llamadas totales: ${tCalls}`, 100, y);
+    y += 6;
+    doc.text(`Promedio por llamada: ${avgT}`, 14, y);
+    doc.text(`Ganancia estimada: ${tMoney}`, 100, y);
+    y += 6;
+    if (isReportDetail) {
+        doc.text(`Diferencia neta (min): ${tDiff}`, 14, y);
+        y += 6;
+    }
+    doc.text(`Variación diaria: ${variation}`, 14, y);
+    doc.text(`Meta 6h: ${overtime}`, 100, y);
+
+    y += 14;
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text('© 2025 Irvin Prado. Ascende Superius – Seek Higher Things', 14, y);
+
+    doc.save(`LogTrack_${start}_${end}.pdf`);
+}
+</script>
+</body>
+</html>
