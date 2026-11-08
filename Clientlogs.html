@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>CallTrack · Rastreador de Llamadas</title>
+    <link rel="icon" href="https://raw.githubusercontent.com/Irvyandl/VirtualAssistance/refs/heads/main/logo.ico" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #f6f2ea;
+            --bg-soft: #efe9dc;
+            --surface: #fffdf9;
+            --surface-2: #faf5ec;
+            --ink: #2b2620;
+            --ink-soft: #7c7266;
+            --ink-faint: #a99f8f;
+            --primary: #6a5acd;
+            --primary-dark: #52439e;
+            --primary-soft: #ece8fb;
+            --accent: #1f8a70;
+            --accent-soft: #e2f2ec;
+            --border: #e6ddcb;
+            --border-soft: #efe8d9;
+
+            --green: #4f8f5e;
+            --green-bg: #e7f2e6;
+            --green-border: #cfe4cd;
+            --amber: #b3822e;
+            --amber-bg: #faf1de;
+            --amber-border: #f0dfb8;
+            --red: #bd5b4c;
+            --red-bg: #f8e9e5;
+            --red-border: #eecdc4;
+
+            --shadow-xs: 0 1px 3px rgba(43, 38, 32, 0.05);
+            --shadow-sm: 0 4px 14px rgba(43, 38, 32, 0.06);
+            --shadow-md: 0 14px 34px rgba(43, 38, 32, 0.10);
+            --shadow-lift: 0 18px 40px rgba(106, 90, 205, 0.18);
+
+            --radius-lg: 22px;
+            --radius-md: 16px;
+            --radius-sm: 11px;
+            --radius-pill: 999px;
+
+            --ease: cubic-bezier(.22, 1, .36, 1);
+        }
+
+        * { box-sizing: border-box; }
+
+        html { -webkit-text-size-adjust: 100%; overflow-x: hidden; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background:
+                radial-gradient(circle at 8% 0%, rgba(106, 90, 205, 0.06), transparent 45%),
+                radial-gradient(circle at 100% 10%, rgba(31, 138, 112, 0.06), transparent 40%),
+                var(--bg);
+            color: var(--ink);
+            margin: 0;
+            padding: 0 20px 56px;
+            overflow-x: hidden;
+            line-height: 1.45;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app-container { max-width: 1180px; margin: 0 auto; display: grid; gap: 26px; }
+
+        ::selection { background: var(--primary-soft); color: var(--primary-dark); }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(246, 242, 234, 0.78);
+            backdrop-filter: blur(14px) saturate(1.1);
+            -webkit-backdrop-filter: blur(14px) saturate(1.1);
+            border-bottom: 1px solid var(--border-soft);
+            padding: 16px 0;
+            margin: 0 -20px;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+        .sticky-header-inner {
+            max-width: 1180px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        h1 {
+            color: var(--ink);
+            margin: 0;
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+            font-style: italic;
+            font-size: 1.7rem;
+            letter-spacing: -0.01em;
+        }
+        h2 {
+            color: var(--ink);
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin: 0 0 20px 0;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-soft);
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+            letter-spacing: -0.01em;
+        }
+        h2 .eyebrow {
+            display: block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .card {
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius-lg);
+            padding: 26px;
+            background: var(--surface);
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.35s var(--ease);
+            animation: rise 0.5s var(--ease) both;
+        }
+        .card:hover { box-shadow: var(--shadow-md); }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+        @media (max-width: 860px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            body { padding: 0 14px 48px; }
+            .sticky-header { margin: 0 -14px; padding-left: 14px; padding-right: 14px; }
+            .card { padding: 18px; border-radius: var(--radius-md); }
+            h1 { font-size: 1.35rem; }
+        }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 7px; font-weight: 600; color: var(--ink-soft); font-size: 0.82rem; letter-spacing: 0.01em; }
+        input, select {
+            width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+            font-size: 1rem; font-family: inherit; color: var(--ink);
+            background: var(--surface-2);
+            transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease);
+        }
+        input:focus, select:focus {
+            border-color: var(--primary); outline: none; box-shadow: 0 0 0 4px var(--primary-soft);
+            background: var(--surface);
+        }
+
+        button {
+            background: var(--primary); color: white; border: none; padding: 12px 22px;
+            border-radius: var(--radius-pill); cursor: pointer; font-weight: 700; font-size: 0.92rem;
+            font-family: inherit;
+            transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease);
+            box-shadow: 0 6px 16px rgba(106, 90, 205, 0.28);
+        }
+        button:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 10px 22px rgba(106, 90, 205, 0.34); }
+        button:active:not(:disabled) { transform: translateY(0); }
+        button.outline {
+            background: transparent; border: 1.5px solid var(--border); color: var(--ink-soft);
+            box-shadow: none;
+        }
+        button.outline:hover { background: var(--surface-2); border-color: var(--primary); color: var(--primary-dark); transform: translateY(-2px); box-shadow: var(--shadow-xs); }
+        button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px; margin-top: 14px;
+        }
+        .stat-box {
+            background: var(--surface-2); padding: 16px 14px; border-radius: var(--radius-md); text-align: center;
+            cursor: pointer; transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), background 0.25s var(--ease), border-color 0.25s var(--ease);
+            border: 1.5px solid transparent; user-select: none; position: relative; overflow: hidden;
+        }
+        .stat-box:hover { transform: translateY(-3px); box-shadow: var(--shadow-sm); }
+        .stat-box.active { border-color: var(--primary); background: var(--primary-soft); box-shadow: var(--shadow-lift); }
+        .stat-box.active .stat-val { color: var(--primary-dark); }
+        .stat-val { font-size: 1.4rem; font-weight: 800; color: var(--ink); display: block; letter-spacing: -0.02em; transition: color 0.25s var(--ease); }
+        .stat-label { font-size: 0.76rem; color: var(--ink-soft); margin-top: 3px; font-weight: 600; }
+        .stat-sub { font-size: 0.72rem; color: var(--ink-faint); margin-top: 5px; }
+
+        .money-box { background: var(--ink); color: white; position: relative; }
+        .money-box .stat-val { color: white; }
+        .money-box .stat-label { color: rgba(255,255,255,0.65); }
+        .money-box.active { background: var(--primary-dark); border-color: var(--primary-dark); }
+
+        .switch-container {
+            display: flex; align-items: center; gap: 9px; background: var(--surface-2);
+            padding: 7px 14px; border-radius: var(--radius-pill); font-size: 0.8rem; font-weight: 600; color: var(--ink-soft);
+            border: 1px solid var(--border-soft);
+        }
+        .switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background: #d9d0bd; transition: .3s var(--ease); border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 16px; width: 16px;
+            left: 3px; bottom: 3px; background: white; transition: .3s var(--ease); border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider { background: var(--primary); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        .table-wrap { overflow-x: auto; margin-top: 6px; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 6px; font-size: 0.88rem; }
+        th {
+            background: transparent; color: var(--ink-faint); padding: 10px 10px; text-align: left;
+            font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+            border-bottom: 1.5px solid var(--border-soft); white-space: nowrap;
+        }
+        td { padding: 12px 10px; border-bottom: 1px solid var(--border-soft); color: var(--ink); }
+        tbody tr { transition: background 0.2s var(--ease); }
+        tbody tr:hover { background: var(--surface-2); }
+
+        @media (max-width: 640px) {
+            table, thead, tbody, th, td, tr { display: block; }
+            thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+            tbody tr {
+                margin-bottom: 12px; border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+                padding: 6px 14px; box-shadow: var(--shadow-xs); background: var(--surface);
+            }
+            tbody tr:hover { background: var(--surface); }
+            td {
+                border: none; padding: 8px 0; display: flex; justify-content: space-between; align-items: center;
+                gap: 10px; font-size: 0.88rem; text-align: right;
+            }
+            td:not(:last-child) { border-bottom: 1px dashed var(--border-soft); }
+            td::before {
+                content: attr(data-label); font-weight: 700; color: var(--ink-soft); font-size: 0.72rem;
+                text-transform: uppercase; letter-spacing: 0.04em; text-align: left;
+            }
+        }
+
+        .hidden { display: none !important; }
+        .alert {
+            padding: 14px 16px; border-radius: var(--radius-md); margin-top: 14px; font-weight: 500; font-size: 0.9rem;
+            border: 1px solid transparent; animation: fadeIn 0.3s var(--ease) both;
+        }
+        .alert strong { font-weight: 700; }
+        .alert-good { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+        .alert-bad { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
+        .alert-info { background: var(--primary-soft); color: var(--primary-dark); border-color: #ddd6f7; }
+
+        #connectionStatus { font-size: 0.76rem; padding: 6px 14px; border-radius: var(--radius-pill); background: var(--surface-2); font-weight: 600; border: 1px solid var(--border-soft); transition: all 0.3s var(--ease); }
+        .status-ok { color: var(--green); background: var(--green-bg) !important; border-color: var(--green-border) !important; }
+        .status-error { color: var(--red); background: var(--red-bg) !important; border-color: var(--red-border) !important; }
+        .status-loading { color: var(--amber); background: var(--amber-bg) !important; border-color: var(--amber-border) !important; }
+
+        .earnings-note {
+            background: var(--surface-2); padding: 14px 16px; border-radius: var(--radius-md); margin-bottom: 16px;
+            font-size: 0.88rem; border: 1px solid var(--border-soft);
+        }
+        .earnings-note .amt { font-size: 1.35rem; color: var(--primary-dark); font-weight: 800; letter-spacing: -0.02em; }
+        .earnings-note .hint { font-size: 0.76rem; color: var(--ink-faint); margin-top: 5px; }
+
+        .chart-container { position: relative; height: 320px; margin-top: 22px; animation: fadeIn 0.4s var(--ease); }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 22px;
+            margin-top: 22px;
+            animation: fadeIn 0.4s var(--ease);
+        }
+        .chart-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius-md);
+            padding: 16px;
+        }
+        .chart-card h3 {
+            margin: 0 0 12px 0;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--ink-soft);
+            letter-spacing: -0.01em;
+        }
+        .chart-card .chart-wrap { position: relative; height: 260px; }
+
+        .export-btns { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 22px; }
+
+        .site-footer {
+            text-align: center;
+            padding: 30px 16px 10px;
+            margin-top: 6px;
+            border-top: 1px solid var(--border-soft);
+            font-size: 0.85rem;
+            color: var(--ink-faint);
+        }
+        .site-footer em { color: var(--ink-soft); font-style: italic; font-family: 'Fraunces', serif; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <header class="sticky-header">
+        <div class="sticky-header-inner">
+            <h1>CallTrack · Llamadas</h1>
+            <div id="connectionStatus" class="status-loading">Verificando conexión…</div>
+        </div>
+    </header>
+
+    <!-- Formulario Nuevo Registro -->
+    <div class="card">
+        <h2><span><span class="eyebrow">Registro individual</span>Nueva Llamada</span></h2>
+
+        <div class="grid-2" style="gap:12px;">
+            <div class="form-group">
+                <label for="clientId">ID de Cliente</label>
+                <input type="text" id="clientId" placeholder="Ej: CLI-2841" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="callType">Tipo de Llamada</label>
+                <input type="text" id="callType" list="callTypeList" placeholder="Selecciona o escribe…" required autocomplete="off">
+                <datalist id="callTypeList">
+                    <option value="Healthcare / Medical Consultation">
+                    <option value="Customer Service / General Inquiry">
+                    <option value="Insurance (Claims & Benefits)">
+                    <option value="Financial / Banking">
+                    <option value="Labor and Delivery">
+                    <option value="Medical Appointments / Scheduling">
+                    <option value="Legal / Court / Deposition">
+                    <option value="Social Services / Welfare">
+                    <option value="911 / Emergency Services">
+                    <option value="Tech Support">
+                    <option value="Education / Parent-Teacher">
+                </datalist>
+            </div>
+        </div>
+
+        <div class="grid-2" style="gap:12px;">
+            <div class="form-group">
+                <label for="callDate">Fecha</label>
+                <input type="date" id="callDate" required>
+            </div>
+            <div class="form-group">
+                <label for="callTime">Hora de la llamada</label>
+                <input type="time" id="callTime" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="callMinutes">Minutos en llamada</label>
+            <input type="number" id="callMinutes" placeholder="0" min="0" step="0.1" required>
+        </div>
+
+        <div class="earnings-note">
+            <div><strong>Ganancia estimada de esta llamada:</strong></div>
+            <span class="amt" id="callEstimate">$0.00</span>
+            <div class="hint">Minutos × $0.10 · pago exclusivamente por minuto en llamada</div>
+        </div>
+
+        <button id="btnSave" onclick="saveCall()" style="width:100%;">Guardar llamada</button>
+        <div id="saveFeedback" class="hidden" style="margin-top:14px;"></div>
+    </div>
+
+    <!-- Panel de Reportes -->
+    <div class="card" id="reportsCard">
+        <h2>
+            <span><span class="eyebrow">Analítica</span>Reportes y Tendencias</span>
+            <div class="switch-container">
+                <span>General</span>
+                <label class="switch">
+                    <input type="checkbox" id="reportDetailSwitch" onchange="toggleReportDetail()">
+                    <span class="slider"></span>
+                </label>
+                <span>Detallado</span>
+            </div>
+        </h2>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+            <input type="date" id="filterStart" style="flex:1; min-width:140px;">
+            <input type="date" id="filterEnd" style="flex:1; min-width:140px;">
+            <button onclick="loadReports()">Filtrar</button>
+        </div>
+
+        <!-- KPIs -->
+        <div class="stats-grid" id="kpiGrid">
+            <div class="stat-box" id="kpiMinutes" onclick="setChartMode('minutes')">
+                <span class="stat-val" id="totalMins">0</span>
+                <span class="stat-label">Minutos en llamada</span>
+            </div>
+            <div class="stat-box" id="kpiCalls" onclick="setChartMode('calls')">
+                <span class="stat-val" id="totalCallsStat">0</span>
+                <span class="stat-label">Llamadas totales</span>
+            </div>
+            <div class="stat-box" id="kpiAvg" onclick="setChartMode('avg')">
+                <span class="stat-val" id="avgTime">0m</span>
+                <span class="stat-label">Tiempo promedio/llamada</span>
+            </div>
+            <div class="stat-box money-box" id="kpiMoney" onclick="setChartMode('earnings')">
+                <span class="stat-val" id="totalMoney">$0.00</span>
+                <span class="stat-label">Ganancia total</span>
+            </div>
+        </div>
+
+        <!-- Vista General: un solo gráfico dinámico -->
+        <div id="generalChartWrap" class="chart-container">
+            <canvas id="mainChart"></canvas>
+        </div>
+
+        <!-- Vista Detallada: grid de 3 gráficos -->
+        <div id="detailedChartsWrap" class="charts-grid hidden">
+            <div class="chart-card">
+                <h3>Top 10 Clientes (por minutos)</h3>
+                <div class="chart-wrap"><canvas id="chartTopClients"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>Distribución por Tipo de Llamada</h3>
+                <div class="chart-wrap"><canvas id="chartTypes"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>Tendencia Horaria</h3>
+                <div class="chart-wrap"><canvas id="chartHours"></canvas></div>
+            </div>
+        </div>
+
+        <div class="export-btns">
+            <button class="outline" onclick="exportPDF()">📄 PDF</button>
+            <button class="outline" onclick="exportExcel()">📊 Excel</button>
+        </div>
+
+        <div class="table-wrap">
+            <table id="reportTable">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        <th>ID Cliente</th>
+                        <th>Tipo</th>
+                        <th>Minutos</th>
+                        <th>Ganancia</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <p>&copy; 2025 Irvin Prado. <em>Ascende Superius – Seek Higher Things</em></p>
+    </footer>
+</div>
+
+<script>
+const RATE = 0.10;
+let currentCalls = [];
+let mainChart = null;
+let chartTopClients = null;
+let chartTypes = null;
+let chartHours = null;
+let chartMode = 'minutes'; // 'minutes' | 'calls' | 'avg' | 'earnings'
+let isReportDetail = false;
+
+// ---------- Helpers ----------
+function todayISO() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function formatHourLabel(h) {
+    const hour = parseInt(h, 10);
+    if (hour === 0) return '12 AM';
+    if (hour < 12) return `${hour} AM`;
+    if (hour === 12) return '12 PM';
+    return `${hour - 12} PM`;
+}
+
+// ---------- Inicialización ----------
+document.addEventListener('DOMContentLoaded', async () => {
+    const today = todayISO();
+    document.getElementById('callDate').value = today;
+    document.getElementById('filterEnd').value = today;
+
+    const lastWeek = new Date();
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    document.getElementById('filterStart').value = lastWeek.toISOString().slice(0, 10);
+
+    // Hora actual como default
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('callTime').value = `${hh}:${mm}`;
+
+    document.getElementById('callMinutes').addEventListener('input', updateCallEstimate);
+
+    await checkConnection();
+    await loadReports();
+});
+
+async function checkConnection() {
+    const el = document.getElementById('connectionStatus');
+    el.textContent = 'Verificando conexión…';
+    el.className = 'status-loading';
+    try {
+        const res = await fetch('/api/calls?start=2099-01-01&end=2099-01-02');
+        if (res.ok) {
+            el.textContent = '✅ Conectado a la base de datos';
+            el.className = 'status-ok';
+        } else throw new Error('No OK');
+    } catch (e) {
+        el.textContent = '❌ Error de conexión';
+        el.className = 'status-error';
+    }
+}
+
+function updateCallEstimate() {
+    const mins = parseFloat(document.getElementById('callMinutes').value) || 0;
+    document.getElementById('callEstimate').textContent = `$${(mins * RATE).toFixed(2)}`;
+}
+
+// ---------- Guardar llamada ----------
+async function saveCall() {
+    const client_id = (document.getElementById('clientId').value || '').trim();
+    const call_type = (document.getElementById('callType').value || '').trim();
+    const call_date = document.getElementById('callDate').value;
+    const call_time = document.getElementById('callTime').value;
+    const call_minutes_raw = document.getElementById('callMinutes').value;
+
+    const missing = [];
+    if (!client_id) missing.push('ID de Cliente');
+    if (!call_type) missing.push('Tipo de Llamada');
+    if (!call_date) missing.push('Fecha');
+    if (!call_time) missing.push('Hora');
+    if (call_minutes_raw === '' || call_minutes_raw === null) missing.push('Minutos en llamada');
+
+    if (missing.length > 0) {
+        showFeedback(`⚠️ Faltan campos: <strong>${missing.join(', ')}</strong>`, false);
+        return;
+    }
+
+    const call_minutes = parseFloat(call_minutes_raw) || 0;
+
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+
+    try {
+        const res = await fetch('/api/calls', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                client_id,
+                call_type,
+                call_date,
+                call_time,
+                call_minutes
+            })
+        });
+        const result = await res.json();
+
+        if (res.ok && (result.success || result.id)) {
+            const earnings = result.earnings != null ? result.earnings : (call_minutes * RATE);
+            showFeedback(`✅ Llamada guardada. Ganancia: <strong>$${Number(earnings).toFixed(2)}</strong>`, true);
+            // Limpiar solo minutos y mantener el resto para agilizar registro
+            document.getElementById('callMinutes').value = '';
+            updateCallEstimate();
+            await loadReports();
+        } else {
+            showFeedback(`❌ Error: ${result.error || 'No se pudo guardar'}`, false);
+        }
+    } catch (e) {
+        showFeedback('❌ Error de red', false);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Guardar llamada';
+    }
+}
+
+function showFeedback(msg, ok) {
+    const el = document.getElementById('saveFeedback');
+    el.className = ok ? 'alert alert-good' : 'alert alert-bad';
+    el.innerHTML = msg;
+    el.classList.remove('hidden');
+}
+
+// ---------- Carga de reportes ----------
+async function loadReports() {
+    const start = document.getElementById('filterStart').value;
+    const end = document.getElementById('filterEnd').value;
+    try {
+        const res = await fetch(`/api/calls?start=${start}&end=${end}`);
+        const data = await res.json();
+        currentCalls = Array.isArray(data) ? data : [];
+        updateSummary(currentCalls);
+        renderTable(currentCalls);
+        if (isReportDetail) {
+            renderDetailedCharts(currentCalls);
+        } else {
+            renderMainChart(currentCalls);
+        }
+    } catch (e) {
+        console.error(e);
+        currentCalls = [];
+        updateSummary([]);
+        renderTable([]);
+    }
+}
+
+function updateSummary(data) {
+    let tMins = 0, tCalls = 0, tMoney = 0;
+    data.forEach(d => {
+        tMins += (Number(d.call_minutes) || 0);
+        tCalls += 1;
+        tMoney += (Number(d.earnings) != null ? Number(d.earnings) : (Number(d.call_minutes) || 0) * RATE);
+    });
+    document.getElementById('totalMins').textContent = tMins.toFixed(tMins % 1 === 0 ? 0 : 1);
+    document.getElementById('totalCallsStat').textContent = tCalls;
+    document.getElementById('totalMoney').textContent = `$${tMoney.toFixed(2)}`;
+    document.getElementById('avgTime').textContent = tCalls > 0 ? `${(tMins / tCalls).toFixed(1)}m` : '0m';
+}
+
+// ---------- KPIs y modo de gráfico ----------
+function setChartMode(mode) {
+    if (isReportDetail) return; // en vista detallada los KPIs no controlan el gráfico principal
+    chartMode = mode;
+    updateKpiActiveStates();
+    renderMainChart(currentCalls);
+}
+
+function updateKpiActiveStates() {
+    document.getElementById('kpiMinutes').classList.toggle('active', chartMode === 'minutes');
+    document.getElementById('kpiCalls').classList.toggle('active', chartMode === 'calls');
+    document.getElementById('kpiAvg').classList.toggle('active', chartMode === 'avg');
+    document.getElementById('kpiMoney').classList.toggle('active', chartMode === 'earnings');
+}
+
+function toggleReportDetail() {
+    isReportDetail = document.getElementById('reportDetailSwitch').checked;
+    const generalWrap = document.getElementById('generalChartWrap');
+    const detailedWrap = document.getElementById('detailedChartsWrap');
+
+    if (isReportDetail) {
+        generalWrap.classList.add('hidden');
+        detailedWrap.classList.remove('hidden');
+        // quitar estados activos de KPIs porque ya no controlan el gráfico
+        ['kpiMinutes','kpiCalls','kpiAvg','kpiMoney'].forEach(id => {
+            document.getElementById(id).classList.remove('active');
+        });
+        renderDetailedCharts(currentCalls);
+    } else {
+        detailedWrap.classList.add('hidden');
+        generalWrap.classList.remove('hidden');
+        updateKpiActiveStates();
+        renderMainChart(currentCalls);
+    }
+}
+
+// ---------- Agrupación por fecha ----------
+function groupByDate(data) {
+    const map = {};
+    data.forEach(d => {
+        const date = d.call_date;
+        if (!map[date]) {
+            map[date] = { minutes: 0, calls: 0, earnings: 0 };
+        }
+        map[date].minutes += Number(d.call_minutes) || 0;
+        map[date].calls += 1;
+        map[date].earnings += (Number(d.earnings) != null ? Number(d.earnings) : (Number(d.call_minutes) || 0) * RATE);
+    });
+    const sortedDates = Object.keys(map).sort();
+    return {
+        labels: sortedDates,
+        minutes: sortedDates.map(d => +map[d].minutes.toFixed(1)),
+        calls: sortedDates.map(d => map[d].calls),
+        earnings: sortedDates.map(d => +map[d].earnings.toFixed(2))
+    };
+}
+
+// ---------- Gráfico principal (Vista General) ----------
+function renderMainChart(data) {
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    if (mainChart) mainChart.destroy();
+
+    const grouped = groupByDate(data);
+    let datasets = [];
+    let yTitle = '';
+    let type = 'line';
+
+    if (chartMode === 'calls') {
+        type = 'bar';
+        datasets = [{
+            label: 'Llamadas por día',
+            data: grouped.calls,
+            backgroundColor: 'rgba(106,90,205,0.55)',
+            borderColor: '#6a5acd',
+            borderWidth: 1.5,
+            borderRadius: 6
+        }];
+        yTitle = 'Cantidad de llamadas';
+    } else if (chartMode === 'earnings') {
+        type = 'line';
+        datasets = [{
+            label: 'Ganancia por día ($)',
+            data: grouped.earnings,
+            borderColor: '#6a5acd',
+            backgroundColor: 'rgba(106,90,205,0.18)',
+            tension: 0.35,
+            fill: true,
+            borderWidth: 2.5
+        }];
+        yTitle = 'USD ($)';
+    } else if (chartMode === 'avg') {
+        // promedio diario = minutos / llamadas de ese día
+        const avgData = grouped.labels.map((_, i) => {
+            const c = grouped.calls[i];
+            return c > 0 ? +(grouped.minutes[i] / c).toFixed(1) : 0;
+        });
+        datasets = [{
+            label: 'Promedio min/llamada por día',
+            data: avgData,
+            borderColor: '#1f8a70',
+            backgroundColor: 'rgba(31,138,112,0.14)',
+            tension: 0.35,
+            fill: true,
+            borderWidth: 2.5
+        }];
+        yTitle = 'Minutos promedio';
+    } else {
+        // minutes (default)
+        datasets = [{
+            label: 'Minutos en llamada por día',
+            data: grouped.minutes,
+            borderColor: '#6a5acd',
+            backgroundColor: 'rgba(106,90,205,0.12)',
+            tension: 0.35,
+            fill: true,
+            borderWidth: 2.5
+        }];
+        yTitle = 'Minutos';
+    }
+
+    mainChart = new Chart(ctx, {
+        type,
+        data: { labels: grouped.labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { usePointStyle: true, boxWidth: 8, font: { family: "'Plus Jakarta Sans'" } }
+                }
+            },
+            elements: { point: { radius: 3, hoverRadius: 5 } },
+            animation: { duration: 500, easing: 'easeOutQuint' },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: yTitle }, grid: { color: 'rgba(43,38,32,0.06)' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+// ---------- Vista Detallada: 3 gráficos ----------
+function renderDetailedCharts(data) {
+    renderTopClientsChart(data);
+    renderTypesChart(data);
+    renderHoursChart(data);
+}
+
+function renderTopClientsChart(data) {
+    const ctx = document.getElementById('chartTopClients').getContext('2d');
+    if (chartTopClients) chartTopClients.destroy();
+
+    const byClient = {};
+    data.forEach(d => {
+        const id = d.client_id || 'Sin ID';
+        byClient[id] = (byClient[id] || 0) + (Number(d.call_minutes) || 0);
+    });
+
+    const sorted = Object.entries(byClient)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+    const labels = sorted.map(([id]) => id);
+    const values = sorted.map(([, mins]) => +mins.toFixed(1));
+
+    chartTopClients = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Minutos totales',
+                data: values,
+                backgroundColor: 'rgba(106,90,205,0.65)',
+                borderColor: '#6a5acd',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => `${ctx.raw} min`
+                    }
+                }
+            },
+            scales: {
+                x: { beginAtZero: true, title: { display: true, text: 'Minutos' }, grid: { color: 'rgba(43,38,32,0.06)' } },
+                y: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function renderTypesChart(data) {
+    const ctx = document.getElementById('chartTypes').getContext('2d');
+    if (chartTypes) chartTypes.destroy();
+
+    const byType = {};
+    data.forEach(d => {
+        const t = d.call_type || 'Sin tipo';
+        byType[t] = (byType[t] || 0) + 1;
+    });
+
+    const entries = Object.entries(byType).sort((a, b) => b[1] - a[1]);
+    const labels = entries.map(([t]) => t);
+    const values = entries.map(([, c]) => c);
+
+    const palette = [
+        '#6a5acd', '#1f8a70', '#b3822e', '#bd5b4c', '#4f8f5e',
+        '#52439e', '#3a9b8a', '#c9a04a', '#d47a6b', '#7c9a6e', '#8b7fd4'
+    ];
+
+    chartTypes = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{
+                data: values,
+                backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+                borderWidth: 2,
+                borderColor: '#fffdf9'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: labels.length <= 8,
+                    position: 'bottom',
+                    labels: { boxWidth: 10, font: { size: 11, family: "'Plus Jakarta Sans'" } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                            const pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+                            return `${ctx.label}: ${ctx.raw} (${pct}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderHoursChart(data) {
+    const ctx = document.getElementById('chartHours').getContext('2d');
+    if (chartHours) chartHours.destroy();
+
+    const hoursCount = Array(24).fill(0);
+    data.forEach(d => {
+        if (!d.call_time) return;
+        const hourStr = String(d.call_time).slice(0, 2);
+        const h = parseInt(hourStr, 10);
+        if (!isNaN(h) && h >= 0 && h <= 23) {
+            hoursCount[h] += 1;
+        }
+    });
+
+    const labels = hoursCount.map((_, i) => formatHourLabel(i));
+    const values = hoursCount;
+
+    chartHours = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Llamadas',
+                data: values,
+                backgroundColor: 'rgba(31,138,112,0.55)',
+                borderColor: '#1f8a70',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: (items) => items[0]?.label || '',
+                        label: (ctx) => `${ctx.raw} llamada${ctx.raw === 1 ? '' : 's'}`
+                    }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Cantidad de llamadas' }, ticks: { stepSize: 1 }, grid: { color: 'rgba(43,38,32,0.06)' } },
+                x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } }
+            }
+        }
+    });
+}
+
+// ---------- Tabla ----------
+function renderTable(data) {
+    const tbody = document.querySelector('#reportTable tbody');
+    tbody.innerHTML = '';
+
+    if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--ink-faint);padding:20px;">No hay registros en el periodo seleccionado</td></tr>`;
+        return;
+    }
+
+    // Ordenar por fecha + hora descendente
+    const sorted = [...data].sort((a, b) => {
+        const da = `${a.call_date} ${a.call_time || ''}`;
+        const db = `${b.call_date} ${b.call_time || ''}`;
+        return db.localeCompare(da);
+    });
+
+    sorted.forEach(row => {
+        const mins = Number(row.call_minutes) || 0;
+        const earnings = row.earnings != null ? Number(row.earnings) : mins * RATE;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td data-label="Fecha">${row.call_date || '—'}</td>
+            <td data-label="Hora">${row.call_time || '—'}</td>
+            <td data-label="ID Cliente">${row.client_id || '—'}</td>
+            <td data-label="Tipo">${row.call_type || '—'}</td>
+            <td data-label="Minutos">${mins % 1 === 0 ? mins : mins.toFixed(1)}</td>
+            <td data-label="Ganancia">$${earnings.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// ---------- Exportaciones ----------
+function exportExcel() {
+    if (!currentCalls.length) return alert('No hay datos para exportar');
+
+    const rows = currentCalls.map(r => {
+        const mins = Number(r.call_minutes) || 0;
+        const earnings = r.earnings != null ? Number(r.earnings) : mins * RATE;
+        return {
+            Fecha: r.call_date || '',
+            Hora: r.call_time || '',
+            'ID Cliente': r.client_id || '',
+            Tipo: r.call_type || '',
+            Minutos: mins,
+            Ganancia: +earnings.toFixed(2)
+        };
+    });
+
+    // Resumen
+    const tMins = currentCalls.reduce((s, d) => s + (Number(d.call_minutes) || 0), 0);
+    const tEarn = currentCalls.reduce((s, d) => s + (d.earnings != null ? Number(d.earnings) : (Number(d.call_minutes) || 0) * RATE), 0);
+    rows.push({});
+    rows.push({ Fecha: 'RESUMEN', Minutos: +tMins.toFixed(1), Ganancia: +tEarn.toFixed(2) });
+    rows.push({ Fecha: '© 2025 Irvin Prado. Ascende Superius – Seek Higher Things' });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Llamadas');
+    XLSX.writeFile(wb, `CallTrack_${document.getElementById('filterStart').value}_${document.getElementById('filterEnd').value}.xlsx`);
+}
+
+function exportPDF() {
+    if (!currentCalls.length) return alert('No hay datos para exportar');
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const start = document.getElementById('filterStart').value;
+    const end = document.getElementById('filterEnd').value;
+
+    doc.setFontSize(16);
+    doc.text('CallTrack · Reporte de Llamadas | Irvin Prado', 14, 18);
+    doc.setFontSize(10);
+    doc.setTextColor(80);
+    doc.text(`Periodo: ${start} → ${end}  |  Vista: ${isReportDetail ? 'Detallada' : 'General'}`, 14, 25);
+    doc.setTextColor(0);
+
+    const head = [['Fecha', 'Hora', 'ID Cliente', 'Tipo', 'Minutos', 'Ganancia']];
+    const body = currentCalls.map(r => {
+        const mins = Number(r.call_minutes) || 0;
+        const earnings = r.earnings != null ? Number(r.earnings) : mins * RATE;
+        return [
+            r.call_date || '',
+            r.call_time || '',
+            r.client_id || '',
+            r.call_type || '',
+            mins % 1 === 0 ? mins : mins.toFixed(1),
+            earnings.toFixed(2)
+        ];
+    });
+
+    doc.autoTable({
+        head,
+        body,
+        startY: 30,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [106, 90, 205] },
+        columnStyles: {
+            4: { halign: 'right' },
+            5: { halign: 'right' }
+        }
+    });
+
+    let y = doc.lastAutoTable.finalY + 12;
+    doc.setFontSize(12);
+    doc.setTextColor(106, 90, 205);
+    doc.text('Resumen', 14, y);
+    doc.setTextColor(0);
+    y += 8;
+    doc.setFontSize(10);
+
+    const tMins = document.getElementById('totalMins').textContent;
+    const tCalls = document.getElementById('totalCallsStat').textContent;
+    const avgT = document.getElementById('avgTime').textContent;
+    const tMoney = document.getElementById('totalMoney').textContent;
+
+    doc.text(`Minutos en llamada: ${tMins}`, 14, y);
+    doc.text(`Llamadas totales: ${tCalls}`, 100, y);
+    y += 6;
+    doc.text(`Promedio por llamada: ${avgT}`, 14, y);
+    doc.text(`Ganancia total: ${tMoney}`, 100, y);
+
+    y += 14;
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text('© 2025 Irvin Prado. Ascende Superius – Seek Higher Things', 14, y);
+
+    doc.save(`CallTrack_${start}_${end}.pdf`);
+}
+</script>
+</body>
+</html>
