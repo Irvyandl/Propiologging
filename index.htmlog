@@ -1,11 +1,13 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>LogTrack de Irvin</title>
     <link rel="icon" href="https://raw.githubusercontent.com/Irvyandl/VirtualAssistance/refs/heads/main/logo.ico" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -13,40 +15,81 @@
 
     <style>
         :root {
-            --primary: #0056b3;
-            --dark: #003366;
-            --light: #e6f0fa;
-            --white: #ffffff;
-            --text: #333333;
-            --border: #ddeeff;
-            --success: #28a745;
-            --danger: #dc3545;
+            --bg: #f6f2ea;
+            --bg-soft: #efe9dc;
+            --surface: #fffdf9;
+            --surface-2: #faf5ec;
+            --ink: #2b2620;
+            --ink-soft: #7c7266;
+            --ink-faint: #a99f8f;
+            --primary: #6a5acd;
+            --primary-dark: #52439e;
+            --primary-soft: #ece8fb;
+            --accent: #1f8a70;
+            --accent-soft: #e2f2ec;
+            --border: #e6ddcb;
+            --border-soft: #efe8d9;
+
+            --green: #4f8f5e;
+            --green-bg: #e7f2e6;
+            --green-border: #cfe4cd;
+            --amber: #b3822e;
+            --amber-bg: #faf1de;
+            --amber-border: #f0dfb8;
+            --red: #bd5b4c;
+            --red-bg: #f8e9e5;
+            --red-border: #eecdc4;
+
+            --shadow-xs: 0 1px 3px rgba(43, 38, 32, 0.05);
+            --shadow-sm: 0 4px 14px rgba(43, 38, 32, 0.06);
+            --shadow-md: 0 14px 34px rgba(43, 38, 32, 0.10);
+            --shadow-lift: 0 18px 40px rgba(106, 90, 205, 0.18);
+
+            --radius-lg: 22px;
+            --radius-md: 16px;
+            --radius-sm: 11px;
+            --radius-pill: 999px;
+
+            --ease: cubic-bezier(.22, 1, .36, 1);
         }
+
         * { box-sizing: border-box; }
-        body { 
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
-            background: var(--white); 
-            color: var(--text); 
-            margin: 0; 
-            padding: 0 16px 40px; 
+
+        html { -webkit-text-size-adjust: 100%; overflow-x: hidden; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background:
+                radial-gradient(circle at 8% 0%, rgba(106, 90, 205, 0.06), transparent 45%),
+                radial-gradient(circle at 100% 10%, rgba(31, 138, 112, 0.06), transparent 40%),
+                var(--bg);
+            color: var(--ink);
+            margin: 0;
+            padding: 0 20px 56px;
+            overflow-x: hidden;
+            line-height: 1.45;
+            -webkit-font-smoothing: antialiased;
         }
-        .app-container { max-width: 1200px; margin: 0 auto; display: grid; gap: 24px; }
+
+        .app-container { max-width: 1180px; margin: 0 auto; display: grid; gap: 26px; }
+
+        ::selection { background: var(--primary-soft); color: var(--primary-dark); }
 
         .sticky-header {
             position: sticky;
             top: 0;
             z-index: 1000;
-            background: rgba(255, 255, 255, 0.82);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-bottom: 2px solid var(--light);
-            padding: 14px 0;
-            margin: 0 -16px;
-            padding-left: 16px;
-            padding-right: 16px;
+            background: rgba(246, 242, 234, 0.78);
+            backdrop-filter: blur(14px) saturate(1.1);
+            -webkit-backdrop-filter: blur(14px) saturate(1.1);
+            border-bottom: 1px solid var(--border-soft);
+            padding: 16px 0;
+            margin: 0 -20px;
+            padding-left: 20px;
+            padding-right: 20px;
         }
         .sticky-header-inner {
-            max-width: 1200px;
+            max-width: 1180px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
@@ -54,215 +97,295 @@
             flex-wrap: wrap;
             gap: 12px;
         }
-        h1 { color: var(--dark); margin: 0; font-size: 1.6rem; }
-        h2 { 
-            color: var(--primary); font-size: 1.15rem; margin: 0 0 16px 0; 
-            border-bottom: 1px solid var(--border); padding-bottom: 8px; 
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+        h1 {
+            color: var(--ink);
+            margin: 0;
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+            font-style: italic;
+            font-size: 1.7rem;
+            letter-spacing: -0.01em;
         }
-        .card { 
-            border: 1px solid var(--border); border-radius: 12px; padding: 20px; 
-            background: var(--white); box-shadow: 0 4px 12px rgba(0,51,102,0.05); 
+        h2 {
+            color: var(--ink);
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin: 0 0 20px 0;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-soft);
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+            letter-spacing: -0.01em;
         }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 768px) { 
-            .grid-2 { grid-template-columns: 1fr; }
-            body { padding: 0 12px 40px; }
-            .sticky-header { margin: 0 -12px; padding-left: 12px; padding-right: 12px; }
-            .card { padding: 16px; }
+        h2 .eyebrow {
+            display: block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--primary);
+            margin-bottom: 4px;
         }
-        .form-group { margin-bottom: 14px; }
-        label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--dark); font-size: 0.9rem; }
-        input, select { 
-            width: 100%; padding: 11px; border: 1px solid #ccc; border-radius: 6px; 
-            font-size: 1rem; transition: border 0.2s; 
-        }
-        input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--light); }
-        button { 
-            background: var(--primary); color: white; border: none; padding: 11px 20px; 
-            border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.2s; font-size: 0.95rem;
-        }
-        button:hover { background: var(--dark); }
-        button.outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
-        button.outline:hover { background: var(--light); }
-        button:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        .stats-grid { 
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
-            gap: 12px; margin-top: 12px; 
+        .card {
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius-lg);
+            padding: 26px;
+            background: var(--surface);
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.35s var(--ease);
+            animation: rise 0.5s var(--ease) both;
         }
-        .stat-box { 
-            background: var(--light); padding: 14px; border-radius: 10px; text-align: center; 
-            cursor: pointer; transition: all 0.2s; border: 2px solid transparent; user-select: none;
+        .card:hover { box-shadow: var(--shadow-md); }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .stat-box:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,86,179,0.15); }
-        .stat-box.active { border-color: var(--primary); background: #d6e9ff; }
-        .stat-val { font-size: 1.4rem; font-weight: bold; color: var(--dark); display: block; }
-        .stat-label { font-size: 0.8rem; color: var(--text); margin-top: 2px; }
-        .stat-sub { font-size: 0.75rem; color: #666; margin-top: 4px; }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+        @media (max-width: 860px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            body { padding: 0 14px 48px; }
+            .sticky-header { margin: 0 -14px; padding-left: 14px; padding-right: 14px; }
+            .card { padding: 18px; border-radius: var(--radius-md); }
+            h1 { font-size: 1.35rem; }
+        }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 7px; font-weight: 600; color: var(--ink-soft); font-size: 0.82rem; letter-spacing: 0.01em; }
+        input, select {
+            width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+            font-size: 1rem; font-family: inherit; color: var(--ink);
+            background: var(--surface-2);
+            transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease);
+        }
+        input:focus, select:focus {
+            border-color: var(--primary); outline: none; box-shadow: 0 0 0 4px var(--primary-soft);
+            background: var(--surface);
+        }
+
+        button {
+            background: var(--primary); color: white; border: none; padding: 12px 22px;
+            border-radius: var(--radius-pill); cursor: pointer; font-weight: 700; font-size: 0.92rem;
+            font-family: inherit;
+            transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease);
+            box-shadow: 0 6px 16px rgba(106, 90, 205, 0.28);
+        }
+        button:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 10px 22px rgba(106, 90, 205, 0.34); }
+        button:active:not(:disabled) { transform: translateY(0); }
+        button.outline {
+            background: transparent; border: 1.5px solid var(--border); color: var(--ink-soft);
+            box-shadow: none;
+        }
+        button.outline:hover { background: var(--surface-2); border-color: var(--primary); color: var(--primary-dark); transform: translateY(-2px); box-shadow: var(--shadow-xs); }
+        button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px; margin-top: 14px;
+        }
+        .stat-box {
+            background: var(--surface-2); padding: 16px 14px; border-radius: var(--radius-md); text-align: center;
+            cursor: pointer; transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), background 0.25s var(--ease), border-color 0.25s var(--ease);
+            border: 1.5px solid transparent; user-select: none; position: relative; overflow: hidden;
+        }
+        .stat-box:hover { transform: translateY(-3px); box-shadow: var(--shadow-sm); }
+        .stat-box.active { border-color: var(--primary); background: var(--primary-soft); box-shadow: var(--shadow-lift); }
+        .stat-box.active .stat-val { color: var(--primary-dark); }
+        .stat-val { font-size: 1.4rem; font-weight: 800; color: var(--ink); display: block; letter-spacing: -0.02em; transition: color 0.25s var(--ease); }
+        .stat-label { font-size: 0.76rem; color: var(--ink-soft); margin-top: 3px; font-weight: 600; }
+        .stat-sub { font-size: 0.72rem; color: var(--ink-faint); margin-top: 5px; }
+
+        .money-box { background: var(--ink); color: white; position: relative; }
+        .money-box .stat-val { color: white; }
+        .money-box .stat-label { color: rgba(255,255,255,0.65); }
+        .money-box.active { background: var(--primary-dark); border-color: var(--primary-dark); }
+        .money-box .mode-tag {
+            display: inline-block; margin-top: 8px; font-size: 0.66rem; font-weight: 700;
+            padding: 3px 10px; border-radius: var(--radius-pill); background: rgba(255,255,255,0.14);
+            color: rgba(255,255,255,0.85); letter-spacing: 0.03em; text-transform: uppercase;
+        }
 
         .switch-container {
-            display: flex; align-items: center; gap: 10px; background: var(--light);
-            padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+            display: flex; align-items: center; gap: 9px; background: var(--surface-2);
+            padding: 7px 14px; border-radius: var(--radius-pill); font-size: 0.8rem; font-weight: 600; color: var(--ink-soft);
+            border: 1px solid var(--border-soft);
         }
-        .switch { position: relative; width: 44px; height: 24px; }
+        .switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider {
             position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background: #ccc; transition: .3s; border-radius: 24px;
+            background: #d9d0bd; transition: .3s var(--ease); border-radius: 24px;
         }
         .slider:before {
-            position: absolute; content: ""; height: 18px; width: 18px;
-            left: 3px; bottom: 3px; background: white; transition: .3s; border-radius: 50%;
+            position: absolute; content: ""; height: 16px; width: 16px;
+            left: 3px; bottom: 3px; background: white; transition: .3s var(--ease); border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
         input:checked + .slider { background: var(--primary); }
-        input:checked + .slider:before { transform: translateX(20px); }
+        input:checked + .slider:before { transform: translateX(18px); }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.9rem; }
-        th { background: var(--dark); color: white; padding: 10px 8px; text-align: left; font-size: 0.85rem; white-space: nowrap; }
-        td { padding: 10px 8px; border-bottom: 1px solid var(--border); }
-        tr:hover { background: var(--light); }
-        .table-wrap { overflow-x: auto; }
+        .table-wrap { overflow-x: hidden; margin-top: 6px; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 6px; font-size: 0.88rem; }
+        th {
+            background: transparent; color: var(--ink-faint); padding: 10px 10px; text-align: left;
+            font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+            border-bottom: 1.5px solid var(--border-soft); white-space: nowrap;
+        }
+        td { padding: 12px 10px; border-bottom: 1px solid var(--border-soft); color: var(--ink); }
+        tbody tr { transition: background 0.2s var(--ease); }
+        tbody tr:hover { background: var(--surface-2); }
+
+        @media (max-width: 640px) {
+            table, thead, tbody, th, td, tr { display: block; }
+            thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+            tbody tr {
+                margin-bottom: 12px; border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+                padding: 6px 14px; box-shadow: var(--shadow-xs); background: var(--surface);
+            }
+            tbody tr:hover { background: var(--surface); }
+            td {
+                border: none; padding: 8px 0; display: flex; justify-content: space-between; align-items: center;
+                gap: 10px; font-size: 0.88rem; text-align: right;
+            }
+            td:not(:last-child) { border-bottom: 1px dashed var(--border-soft); }
+            td::before {
+                content: attr(data-label); font-weight: 700; color: var(--ink-soft); font-size: 0.72rem;
+                text-transform: uppercase; letter-spacing: 0.04em; text-align: left;
+            }
+        }
 
         .hidden { display: none !important; }
-        .alert { padding: 12px 14px; border-radius: 8px; margin-top: 12px; font-weight: 500; font-size: 0.9rem; }
-        .alert-good { background: #d4edda; color: #155724; }
-        .alert-bad { background: #f8d7da; color: #721c24; }
-        .alert-info { background: #d1ecf1; color: #0c5460; }
+        .alert {
+            padding: 14px 16px; border-radius: var(--radius-md); margin-top: 14px; font-weight: 500; font-size: 0.9rem;
+            border: 1px solid transparent; animation: fadeIn 0.3s var(--ease) both;
+        }
+        .alert strong { font-weight: 700; }
+        .alert-good { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+        .alert-bad { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
+        .alert-info { background: var(--primary-soft); color: var(--primary-dark); border-color: #ddd6f7; }
 
-        #connectionStatus { font-size: 0.8rem; padding: 5px 12px; border-radius: 20px; background: var(--light); }
-        .status-ok { color: #155724; background: #d4edda !important; }
-        .status-error { color: #721c24; background: #f8d7da !important; }
-        .status-loading { color: #856404; background: #fff3cd !important; }
+        #connectionStatus { font-size: 0.76rem; padding: 6px 14px; border-radius: var(--radius-pill); background: var(--surface-2); font-weight: 600; border: 1px solid var(--border-soft); transition: all 0.3s var(--ease); }
+        .status-ok { color: var(--green); background: var(--green-bg) !important; border-color: var(--green-border) !important; }
+        .status-error { color: var(--red); background: var(--red-bg) !important; border-color: var(--red-border) !important; }
+        .status-loading { color: var(--amber); background: var(--amber-bg) !important; border-color: var(--amber-border) !important; }
 
-        .meta-bar { background: #eee; border-radius: 8px; height: 10px; margin-top: 6px; overflow: hidden; }
-        .meta-fill { height: 100%; background: var(--success); border-radius: 8px; transition: width 0.4s; }
-        .meta-fill.over { background: #17a2b8; }
+        .meta-bar { background: var(--border-soft); border-radius: var(--radius-pill); height: 8px; margin-top: 8px; overflow: hidden; }
+        .meta-fill { height: 100%; background: var(--accent); border-radius: var(--radius-pill); transition: width 0.5s var(--ease); }
+        .meta-fill.over { background: var(--primary); }
 
-        .month-chips { 
-            display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; 
-            justify-content: center;
+        .month-chips {
+            display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
         }
         .month-chip {
-            padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
-            background: var(--white); cursor: pointer; font-size: 0.85rem; transition: all 0.2s;
+            padding: 7px 15px; border-radius: var(--radius-pill); border: 1.5px solid var(--border);
+            background: var(--surface); cursor: pointer; font-size: 0.82rem; font-weight: 600; color: var(--ink-soft);
+            transition: all 0.22s var(--ease);
         }
-        .month-chip.selected { background: var(--primary); color: white; border-color: var(--primary); }
+        .month-chip:hover { border-color: var(--primary); color: var(--primary-dark); transform: translateY(-1px); }
+        .month-chip.selected { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 6px 14px rgba(106,90,205,0.3); }
 
-        .chart-container { position: relative; height: 300px; margin-top: 20px; }
-        .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+        .chart-container { position: relative; height: 300px; margin-top: 22px; animation: fadeIn 0.4s var(--ease); }
+        .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
         @media (max-width: 600px) { .kpi-row { grid-template-columns: 1fr; } }
-        .export-btns { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 20px; }
+        .export-btns { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 22px; }
+
+        .earnings-note {
+            background: var(--surface-2); padding: 14px 16px; border-radius: var(--radius-md); margin-bottom: 16px;
+            font-size: 0.88rem; border: 1px solid var(--border-soft);
+        }
+        .earnings-note .amt { font-size: 1.35rem; color: var(--primary-dark); font-weight: 800; letter-spacing: -0.02em; }
+        .earnings-note .hint { font-size: 0.76rem; color: var(--ink-faint); margin-top: 5px; }
 
         .site-footer {
             text-align: center;
-            padding: 24px 16px;
-            margin-top: 20px;
-            border-top: 1px solid var(--border);
-            font-size: 0.9rem;
-            color: #555;
+            padding: 30px 16px 10px;
+            margin-top: 6px;
+            border-top: 1px solid var(--border-soft);
+            font-size: 0.85rem;
+            color: var(--ink-faint);
         }
-        .site-footer em { color: var(--dark); }
+        .site-footer em { color: var(--ink-soft); font-style: italic; font-family: 'Fraunces', serif; }
+
+        .discrepancy-wrap { transition: all 0.3s var(--ease); }
     </style>
 </head>
 <body>
 <div class="app-container">
     <header class="sticky-header">
         <div class="sticky-header-inner">
-            <h1>LogTrack de Irvin.</h1>
-            <div id="connectionStatus" class="status-loading">Verificando conexión...</div>
+            <h1>LogTrack de Irvin</h1>
+            <div id="connectionStatus" class="status-loading">Verificando conexión…</div>
         </div>
     </header>
 
-    <div class="grid-2" style="margin-top: 8px;">
+    <div class="grid-2" style="margin-top: 4px;">
         <div class="card">
-            <h2>Nuevo Registro</h2>
+            <h2><span><span class="eyebrow">Registro diario</span>Nuevo Registro</span></h2>
             <div class="form-group">
-                <label>Selecciona Fecha</label>
+                <label>Selecciona fecha</label>
                 <input type="date" id="dateInput">
             </div>
             <div id="dataForm" class="hidden">
-                <div class="grid-2" style="gap:10px;">
+                <div class="grid-2" style="gap:12px;">
                     <div class="form-group">
-                        <label>Minutos en Llamada</label>
+                        <label>Minutos en llamada</label>
                         <input type="number" id="callMinutes" placeholder="0" min="0">
                     </div>
                     <div class="form-group">
-                        <label>Llamadas Totales</label>
+                        <label>Llamadas totales</label>
                         <input type="number" id="totalCalls" placeholder="0" min="0">
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Tiempo Disponible Total (en línea)</label>
+                    <label>Tiempo disponible total (en línea)</label>
                     <div style="display:flex; gap:10px;">
                         <input type="number" id="availHours" placeholder="Horas" min="0">
                         <input type="number" id="availMins" placeholder="Min" min="0" max="59">
                     </div>
                 </div>
-                <div style="background:var(--light); padding:12px; border-radius:8px; margin-bottom:14px; font-size:0.9rem;">
-                    <strong>Ganancia Estimada del Día:</strong>
-                    <span id="dayEstimate" style="font-size:1.25rem; color:var(--primary); font-weight:bold;">$0.00</span>
-                    <div style="font-size:0.78rem; color:#666; margin-top:4px;">Solo minutos en llamada × $0.10</div>
+                <div class="earnings-note">
+                    <div><strong>Ganancia estimada del día:</strong></div>
+                    <span class="amt" id="dayEstimate">$0.00</span>
+                    <div class="hint">Minutos en llamada × $0.10 · pago exclusivamente por minuto en llamada</div>
                 </div>
-                <button id="btnSave" onclick="saveLog()">Guardar Registro</button>
-                <div id="saveFeedback" class="hidden" style="margin-top:12px;"></div>
+                <button id="btnSave" onclick="saveLog()" style="width:100%;">Guardar registro</button>
+                <div id="saveFeedback" class="hidden" style="margin-top:14px;"></div>
             </div>
         </div>
 
         <div class="card">
-            <h2>
-                Conciliación de Pagos
-                <div class="switch-container">
-                    <span>General</span>
-                    <label class="switch">
-                        <input type="checkbox" id="payDetailSwitch" onchange="togglePayDetail()">
-                        <span class="slider"></span>
-                    </label>
-                    <span>Detallado</span>
-                </div>
-            </h2>
+            <h2><span><span class="eyebrow">Verificación</span>Conciliación de Pagos</span></h2>
             <div class="form-group">
                 <label>Selecciona uno o varios meses</label>
                 <div class="month-chips" id="monthChips">
-                    <span style="font-size:0.85rem; color:#666;">Cargando meses con datos...</span>
+                    <span style="font-size:0.85rem; color:var(--ink-faint);">Cargando meses con datos…</span>
                 </div>
             </div>
-            <div id="paySummaryGeneral">
-                <div class="grid-2">
-                    <div class="stat-box" style="cursor:default;">
-                        <span class="stat-label">Estimado (solo llamadas)</span>
-                        <span class="stat-val" id="calcEarnings">$0.00</span>
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size:0.8rem; text-align:center;">Pago Real Recibido ($)</label>
-                        <input type="number" id="realPayment" placeholder="0.00" step="0.01" style="text-align:center; font-weight:bold; color:var(--primary);">
-                    </div>
+            <div class="grid-2">
+                <div class="stat-box" style="cursor:default;">
+                    <span class="stat-label">Pago estimado (min. en llamada)</span>
+                    <span class="stat-val" id="calcEarnings">$0.00</span>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label style="text-align:center;">Pago real recibido ($)</label>
+                    <input type="number" id="realPayment" placeholder="0.00" step="0.01" style="text-align:center; font-weight:bold; color:var(--primary-dark);">
                 </div>
             </div>
-            <div id="paySummaryDetail" class="hidden">
-                <div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr;">
-                    <div class="stat-box" style="cursor:default;">
-                        <span class="stat-label">Calc A (Llamadas)</span>
-                        <span class="stat-val" id="calcA" style="font-size:1.2rem;">$0.00</span>
-                    </div>
-                    <div class="stat-box" style="cursor:default;">
-                        <span class="stat-label">Calc B (Logueado)</span>
-                        <span class="stat-val" id="calcB" style="font-size:1.2rem;">$0.00</span>
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size:0.75rem; text-align:center;">Pago Real ($)</label>
-                        <input type="number" id="realPaymentDetail" placeholder="0.00" step="0.01" style="text-align:center; font-weight:bold; color:var(--primary);">
-                    </div>
-                </div>
-            </div>
-            <button class="outline" style="width:100%; margin-top:14px;" onclick="savePayment()">Verificar Discrepancia</button>
-            <div id="discrepancyBox" class="hidden"></div>
+            <button class="outline" style="width:100%; margin-top:16px;" onclick="savePayment()">Verificar discrepancia</button>
+            <div id="discrepancyBox" class="hidden discrepancy-wrap"></div>
         </div>
     </div>
 
     <div class="card" id="reportsCard">
         <h2>
-            Reportes y Tendencias
+            <span><span class="eyebrow">Panel</span>Reportes y Tendencias</span>
             <div class="switch-container">
                 <span>General</span>
                 <label class="switch">
@@ -272,44 +395,45 @@
                 <span>Detallado</span>
             </div>
         </h2>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-            <input type="date" id="filterStart">
-            <input type="date" id="filterEnd">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+            <input type="date" id="filterStart" style="flex:1; min-width:140px;">
+            <input type="date" id="filterEnd" style="flex:1; min-width:140px;">
             <button onclick="loadReports()">Filtrar</button>
         </div>
 
         <div class="stats-grid" id="kpiGrid">
             <div class="stat-box" id="kpiCallMins" onclick="setChartMode('default')">
                 <span class="stat-val" id="totalMins">0</span>
-                <span class="stat-label">Minutos en Llamada</span>
+                <span class="stat-label">Minutos en llamada</span>
             </div>
             <div class="stat-box" id="kpiCalls" onclick="setChartMode('calls')">
                 <span class="stat-val" id="totalCallsStat">0</span>
-                <span class="stat-label">Llamadas Totales</span>
+                <span class="stat-label">Llamadas totales</span>
             </div>
             <div class="stat-box" id="kpiAvg" onclick="setChartMode('avg')">
                 <span class="stat-val" id="avgTime">0m</span>
-                <span class="stat-label">Tiempo Promedio/Llamada</span>
+                <span class="stat-label">Tiempo promedio/llamada</span>
             </div>
-            <div class="stat-box" style="background:var(--dark); color:white;" id="kpiMoney" onclick="setChartMode('earnings')">
-                <span class="stat-val" style="color:white;" id="totalMoney">$0.00</span>
-                <span class="stat-label" style="color:#ccc;">Ganancia Total (Est.)</span>
+            <div class="stat-box money-box" id="kpiMoney" onclick="cycleMoneyChart()">
+                <span class="stat-val" id="totalMoney">$0.00</span>
+                <span class="stat-label">Ganancia total (est.)</span>
+                <span class="mode-tag" id="moneyModeLabel">Click para ver detalles</span>
             </div>
             <div class="stat-box hidden" id="kpiDiff" onclick="setChartMode('diff')">
                 <span class="stat-val" id="totalDiff">0</span>
-                <span class="stat-label">Diferencia Neta (min)</span>
-                <div class="stat-sub">Conectado − Llamada</div>
+                <span class="stat-label">Diferencia neta (min)</span>
+                <div class="stat-sub">Conectado − Llamada · solo L–V</div>
             </div>
         </div>
 
         <div class="kpi-row">
             <div class="stat-box" style="cursor:default; text-align:left;">
-                <span class="stat-label">Variación Diaria (Conectado vs Llamada)</span>
+                <span class="stat-label">Variación diaria (Conectado vs Llamada)</span>
                 <span class="stat-val" id="dailyVariation" style="font-size:1.3rem;">—</span>
                 <div class="stat-sub" id="dailyVariationNote">Comparado con el día anterior</div>
             </div>
-            <div class="stat-box" style="cursor:default; text-align:left;">
-                <span class="stat-label">Meta Diaria: 6 horas (360 min)</span>
+            <div class="stat-box" id="kpiMeta" style="text-align:left;" onclick="setChartMode('meta')">
+                <span class="stat-label">Meta diaria: 400 min conectados · solo L–V</span>
                 <span class="stat-val" id="overtimeVal" style="font-size:1.3rem;">—</span>
                 <div class="meta-bar"><div class="meta-fill" id="metaFill" style="width:0%"></div></div>
                 <div class="stat-sub" id="overtimeNote">Tiempo extra / déficit sobre meta</div>
@@ -338,13 +462,30 @@
 
 <script>
 const RATE = 0.10;
-const META_MINUTES = 360;
+const META_MINUTES = 400;
 let currentLogs = [];
 let chartInstance = null;
-let chartMode = 'default';
+let chartMode = 'default'; // 'default' | 'calls' | 'avg' | 'diff' | 'earningsDaily' | 'earningsHourly'
 let isReportDetail = false;
-let isPayDetail = false;
+let moneyClickState = 0; // 0 = apagado/base, 1 = ganancia diaria, 2 = ganancia por hora
 let selectedMonths = new Set();
+let variationRequestId = 0;
+
+// ---------- Helpers de fechas (sin desfases de zona horaria) ----------
+function isWeekend(dateStr) {
+    const [y, m, d] = String(dateStr).slice(0, 10).split('-').map(Number);
+    const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+    return dow === 0 || dow === 6; // domingo = 0, sábado = 6
+}
+function shiftDate(dateStr, days) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+function daysInclusive(startStr, endStr) {
+    const [y1, m1, d1] = startStr.split('-').map(Number);
+    const [y2, m2, d2] = endStr.split('-').map(Number);
+    return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86400000) + 1;
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     const today = new Date().toISOString().split('T')[0];
@@ -361,7 +502,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function checkConnection() {
     const el = document.getElementById('connectionStatus');
-    el.textContent = 'Verificando conexión...';
+    el.textContent = 'Verificando conexión…';
     el.className = 'status-loading';
     try {
         const res = await fetch('/api/logs?start=2099-01-01&end=2099-01-02');
@@ -434,7 +575,7 @@ async function saveLog() {
     const totalAvailMins = (availH * 60) + availM;
 
     const btn = document.getElementById('btnSave');
-    btn.disabled = true; btn.textContent = 'Guardando...';
+    btn.disabled = true; btn.textContent = 'Guardando…';
     try {
         const res = await fetch('/api/logs', {
             method: 'POST',
@@ -448,7 +589,7 @@ async function saveLog() {
             await buildMonthChipsFromData();
         } else showFeedback(`❌ Error: ${result.error || 'No se pudo guardar'}`, false);
     } catch (e) { showFeedback('❌ Error de red', false); }
-    finally { btn.disabled = false; btn.textContent = 'Guardar Registro'; }
+    finally { btn.disabled = false; btn.textContent = 'Guardar registro'; }
 }
 
 function showFeedback(msg, ok) {
@@ -468,52 +609,108 @@ async function loadReports() {
         updateSummary(currentLogs);
         renderTable(currentLogs);
         renderChart(currentLogs);
-        updateVariationAndMeta(currentLogs);
+        updateMeta(currentLogs);
+        await updateVariation(currentLogs, start, end);
     } catch (e) { console.error(e); currentLogs = []; }
 }
 
 function updateSummary(data) {
-    let tMins = 0, tCalls = 0, tMoney = 0, tAvail = 0;
+    // Minutos, llamadas, promedio y ganancia incluyen todos los días (también sábado y domingo).
+    // La Diferencia Neta excluye sábados y domingos.
+    let tMins = 0, tCalls = 0, tMoney = 0, tDiff = 0;
     data.forEach(d => {
         tMins += (d.call_minutes || 0);
         tCalls += (d.total_calls || 0);
         tMoney += (d.call_minutes || 0) * RATE;
-        tAvail += (d.available_minutes || 0);
+        if (!isWeekend(d.date)) tDiff += (d.available_minutes || 0) - (d.call_minutes || 0);
     });
     document.getElementById('totalMins').innerText = tMins;
     document.getElementById('totalCallsStat').innerText = tCalls;
     document.getElementById('totalMoney').innerText = `$${tMoney.toFixed(2)}`;
     document.getElementById('avgTime').innerText = tCalls > 0 ? `${(tMins / tCalls).toFixed(1)}m` : '0m';
-    document.getElementById('totalDiff').innerText = tAvail - tMins;
+    document.getElementById('totalDiff').innerText = tDiff;
 }
 
-function updateVariationAndMeta(data) {
-    const sorted = [...data].sort((a,b) => new Date(a.date) - new Date(b.date));
-    if (sorted.length >= 2) {
-        const last = sorted[sorted.length - 1];
-        const prev = sorted[sorted.length - 2];
-        const lastRatio = last.available_minutes > 0 ? ((last.available_minutes - last.call_minutes) / last.available_minutes) * 100 : 0;
-        const prevRatio = prev.available_minutes > 0 ? ((prev.available_minutes - prev.call_minutes) / prev.available_minutes) * 100 : 0;
-        const delta = lastRatio - prevRatio;
-        const el = document.getElementById('dailyVariation');
-        el.innerText = `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%`;
-        el.style.color = delta > 0 ? 'var(--danger)' : 'var(--success)';
-        document.getElementById('dailyVariationNote').innerText = `Diferencia de tiempo no productivo: ${last.date} vs ${prev.date}`;
-    } else {
-        document.getElementById('dailyVariation').innerText = '—';
-        document.getElementById('dailyVariationNote').innerText = 'Se necesitan al menos 2 días';
+// % del tiempo conectado que NO fue en llamada, usando solo días laborales (L-V).
+function idleRatioWeekdays(logs) {
+    let avail = 0, call = 0;
+    logs.forEach(l => {
+        if (isWeekend(l.date)) return;
+        avail += (l.available_minutes || 0);
+        call += (l.call_minutes || 0);
+    });
+    return avail > 0 ? ((avail - call) / avail) * 100 : null;
+}
+
+// Compara el periodo filtrado contra el periodo inmediatamente anterior de la misma longitud (solo L-V).
+async function updateVariation(data, startStr, endStr) {
+    const reqId = ++variationRequestId;
+    const el = document.getElementById('dailyVariation');
+    const note = document.getElementById('dailyVariationNote');
+    const setEmpty = (msg) => {
+        el.innerText = '—';
+        el.style.color = 'var(--ink)';
+        note.innerText = msg;
+    };
+
+    if (!startStr || !endStr || startStr > endStr) return setEmpty('Selecciona un rango de fechas válido');
+
+    const len = daysInclusive(startStr, endStr);
+    const prevEnd = shiftDate(startStr, -1);
+    const prevStart = shiftDate(prevEnd, -(len - 1));
+
+    let prevLogs = [];
+    try {
+        const res = await fetch(`/api/logs?start=${prevStart}&end=${prevEnd}`);
+        const json = await res.json();
+        prevLogs = Array.isArray(json) ? json : [];
+    } catch (e) { console.error(e); }
+
+    if (reqId !== variationRequestId) return; // llegó una consulta más reciente
+
+    const curRatio = idleRatioWeekdays(data);
+    const prevRatio = idleRatioWeekdays(prevLogs);
+    if (curRatio === null || prevRatio === null) {
+        return setEmpty(`Sin días laborales con datos para comparar ${startStr} → ${endStr} vs ${prevStart} → ${prevEnd}`);
     }
-    if (sorted.length > 0) {
-        const avgAvail = sorted.reduce((s,d) => s + (d.available_minutes||0), 0) / sorted.length;
-        const extra = avgAvail - META_MINUTES;
-        const pct = Math.min(100, (avgAvail / META_MINUTES) * 100);
-        document.getElementById('overtimeVal').innerText = extra >= 0 ? `+${Math.round(extra)} min extra` : `${Math.round(extra)} min`;
-        document.getElementById('overtimeVal').style.color = extra >= 0 ? 'var(--success)' : 'var(--danger)';
-        const fill = document.getElementById('metaFill');
-        fill.style.width = `${pct}%`;
-        fill.className = 'meta-fill' + (extra >= 0 ? ' over' : '');
-        document.getElementById('overtimeNote').innerText = `Promedio diario: ${Math.round(avgAvail)} min (meta ${META_MINUTES} min)`;
+
+    const delta = curRatio - prevRatio;
+    el.innerText = `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%`;
+    el.style.color = delta > 0 ? 'var(--red)' : 'var(--green)';
+    note.innerText = `Tiempo no productivo (solo L–V): ${startStr} → ${endStr} vs ${prevStart} → ${prevEnd}`;
+}
+
+// Meta diaria: 400 min conectados, solo días laborales.
+function updateMeta(data) {
+    const weekdays = data.filter(d => !isWeekend(d.date));
+    const valEl = document.getElementById('overtimeVal');
+    const fill = document.getElementById('metaFill');
+    if (weekdays.length === 0) {
+        valEl.innerText = '—';
+        valEl.style.color = 'var(--ink)';
+        fill.style.width = '0%';
+        fill.className = 'meta-fill';
+        document.getElementById('overtimeNote').innerText = 'Sin días laborales en el periodo';
+        return;
     }
+    const avgAvail = weekdays.reduce((s, d) => s + (d.available_minutes || 0), 0) / weekdays.length;
+    const extra = avgAvail - META_MINUTES;
+    const pct = Math.min(100, (avgAvail / META_MINUTES) * 100);
+    valEl.innerText = extra >= 0 ? `+${Math.round(extra)} min extra` : `${Math.round(extra)} min`;
+    valEl.style.color = extra >= 0 ? 'var(--green)' : 'var(--red)';
+    fill.style.width = `${pct}%`;
+    fill.className = 'meta-fill' + (extra >= 0 ? ' over' : '');
+    document.getElementById('overtimeNote').innerText = `Promedio L–V: ${Math.round(avgAvail)} min (meta ${META_MINUTES} min)`;
+}
+
+// Semaforización de productividad para la columna "Diferencia" del reporte detallado.
+// Productividad = 1 - (diferencia / tiempo total logueado)
+function productivityColor(diff, avail) {
+    if (!avail || avail <= 0) return 'var(--ink)';
+    const waitedPct = (diff / avail) * 100; // % del tiempo logueado que NO fue en llamada
+    if (waitedPct <= 15) return 'var(--green)';       // 85% o más productivo
+    if (waitedPct <= 30) return 'var(--amber)';        // 70% - 84% productivo
+    return 'var(--red)';                               // 69% o menos productivo
 }
 
 function renderTable(data) {
@@ -521,12 +718,12 @@ function renderTable(data) {
     const thead = document.getElementById('tableHead');
     tbody.innerHTML = '';
     if (isReportDetail) {
-        thead.innerHTML = `<th>Fecha</th><th>Min. Llamada</th><th># Llamadas</th><th>Disponible</th><th>Diferencia</th><th>Promedio</th><th>Gan. Llamada</th><th>Gan. Logueado</th>`;
+        thead.innerHTML = `<th>Fecha</th><th>Min. Llamada</th><th># Llamadas</th><th>Disponible</th><th>Diferencia</th><th>Promedio</th><th>Gan. Llamada</th>`;
     } else {
         thead.innerHTML = `<th>Fecha</th><th>Min. Llamada</th><th># Llamadas</th><th>Disponible</th><th>Promedio</th><th>Ganancia ($)</th>`;
     }
     if (!data.length) {
-        tbody.innerHTML = `<tr><td colspan="${isReportDetail ? 8 : 6}" style="text-align:center;color:#666;">No hay registros</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${isReportDetail ? 7 : 6}" style="text-align:center;color:var(--ink-faint);">No hay registros</td></tr>`;
         return;
     }
     data.forEach(row => {
@@ -535,16 +732,26 @@ function renderTable(data) {
         const avail = row.available_minutes || 0;
         const avg = calls > 0 ? (call / calls).toFixed(1) : '0';
         const ganCall = (call * RATE).toFixed(2);
-        const ganLog = (avail * RATE).toFixed(2);
         const diff = avail - call;
         const tr = document.createElement('tr');
         if (isReportDetail) {
-            tr.innerHTML = `<td>${row.date}</td><td>${call}</td><td>${calls}</td><td>${avail}</td>
-                <td style="color:${diff > 60 ? 'var(--danger)' : 'inherit'}">${diff}</td>
-                <td>${avg} min</td><td>$${ganCall}</td><td>$${ganLog}</td>`;
+            const weekend = isWeekend(row.date);
+            const diffShown = weekend ? '-' : diff;
+            const diffColor = weekend ? 'var(--green)' : productivityColor(diff, avail);
+            tr.innerHTML = `<td data-label="Fecha">${row.date}</td>
+                <td data-label="Min. Llamada">${call}</td>
+                <td data-label="# Llamadas">${calls}</td>
+                <td data-label="Disponible">${avail}</td>
+                <td data-label="Diferencia" style="color:${diffColor}; font-weight:700;">${diffShown}</td>
+                <td data-label="Promedio">${avg} min</td>
+                <td data-label="Gan. Llamada">$${ganCall}</td>`;
         } else {
-            tr.innerHTML = `<td>${row.date}</td><td>${call}</td><td>${calls}</td><td>${avail}</td>
-                <td>${avg} min</td><td>$${(call * RATE).toFixed(2)}</td>`;
+            tr.innerHTML = `<td data-label="Fecha">${row.date}</td>
+                <td data-label="Min. Llamada">${call}</td>
+                <td data-label="# Llamadas">${calls}</td>
+                <td data-label="Disponible">${avail}</td>
+                <td data-label="Promedio">${avg} min</td>
+                <td data-label="Ganancia">$${(call * RATE).toFixed(2)}</td>`;
         }
         tbody.appendChild(tr);
     });
@@ -553,20 +760,40 @@ function renderTable(data) {
 function setChartMode(mode) {
     if (chartMode === mode && mode !== 'default') chartMode = 'default';
     else chartMode = mode;
+    moneyClickState = 0; // cualquier otra tarjeta reinicia el ciclo de la tarjeta de ganancias
+    updateKpiActiveStates();
+    renderChart(currentLogs);
+}
 
+function cycleMoneyChart() {
+    moneyClickState = (moneyClickState + 1) % 3;
+    if (moneyClickState === 0) chartMode = 'default';
+    else if (moneyClickState === 1) chartMode = 'earningsDaily';
+    else chartMode = 'earningsHourly';
+    updateKpiActiveStates();
+    renderChart(currentLogs);
+}
+
+function updateKpiActiveStates() {
     document.getElementById('kpiCallMins').classList.toggle('active', chartMode === 'default');
     document.getElementById('kpiCalls').classList.toggle('active', chartMode === 'calls');
     document.getElementById('kpiAvg').classList.toggle('active', chartMode === 'avg');
-    document.getElementById('kpiMoney').classList.toggle('active', chartMode === 'earnings');
+    document.getElementById('kpiMoney').classList.toggle('active', chartMode === 'earningsDaily' || chartMode === 'earningsHourly');
     document.getElementById('kpiDiff').classList.toggle('active', chartMode === 'diff');
+    document.getElementById('kpiMeta').classList.toggle('active', chartMode === 'meta');
 
-    renderChart(currentLogs);
+    const moneyLabel = document.getElementById('moneyModeLabel');
+    if (chartMode === 'earningsDaily') moneyLabel.textContent = 'Viendo: ganancia total por día';
+    else if (chartMode === 'earningsHourly') moneyLabel.textContent = 'Viendo: ganancia promedio por hora';
+    else moneyLabel.textContent = 'Click para ver detalles';
 }
 
 function renderChart(data) {
     const ctx = document.getElementById('trendsChart').getContext('2d');
     if (chartInstance) chartInstance.destroy();
-    const sorted = [...data].sort((a,b) => new Date(a.date) - new Date(b.date));
+    let sorted = [...data].sort((a,b) => new Date(a.date) - new Date(b.date));
+    // Diferencia y Meta se evalúan solo en días laborales: sábados y domingos no se grafican.
+    if (chartMode === 'diff' || chartMode === 'meta') sorted = sorted.filter(d => !isWeekend(d.date));
     const labels = sorted.map(d => d.date);
     let datasets = [], yTitle = '';
 
@@ -574,7 +801,7 @@ function renderChart(data) {
         datasets = [{
             label: 'Llamadas por día',
             data: sorted.map(d => d.total_calls || 0),
-            borderColor: '#0056b3', backgroundColor: 'rgba(0,86,179,0.15)', tension: 0.3, fill: true
+            borderColor: '#6a5acd', backgroundColor: 'rgba(106,90,205,0.12)', tension: 0.35, fill: true, borderWidth: 2.5
         }];
         yTitle = 'Cantidad de llamadas';
     } else if (chartMode === 'avg') {
@@ -584,29 +811,49 @@ function renderChart(data) {
                 const c = d.total_calls || 0;
                 return c > 0 ? +(d.call_minutes / c).toFixed(1) : 0;
             }),
-            borderColor: '#6f42c1', backgroundColor: 'rgba(111,66,193,0.15)', tension: 0.3, fill: true
+            borderColor: '#1f8a70', backgroundColor: 'rgba(31,138,112,0.12)', tension: 0.35, fill: true, borderWidth: 2.5
         }];
         yTitle = 'Minutos promedio';
-    } else if (chartMode === 'earnings') {
+    } else if (chartMode === 'earningsDaily') {
+        datasets = [{
+            label: 'Ganancia total del día ($)',
+            data: sorted.map(d => +((d.call_minutes || 0) * RATE).toFixed(2)),
+            borderColor: '#6a5acd', backgroundColor: 'rgba(106,90,205,0.14)', tension: 0.35, fill: true, borderWidth: 2.5
+        }];
+        yTitle = 'USD ($) por día';
+    } else if (chartMode === 'earningsHourly') {
+        datasets = [{
+            label: 'Ganancia promedio por hora ($/h)',
+            data: sorted.map(d => {
+                const avail = d.available_minutes || 0;
+                if (avail <= 0) return 0;
+                const dayEarnings = (d.call_minutes || 0) * RATE;
+                return +(dayEarnings / (avail / 60)).toFixed(2);
+            }),
+            borderColor: '#b3822e', backgroundColor: 'rgba(179,130,46,0.14)', tension: 0.35, fill: true, borderWidth: 2.5
+        }];
+        yTitle = 'USD ($) por hora logueada';
+    } else if (chartMode === 'meta') {
         datasets = [
             {
-                label: 'Ganancia por Min. Llamada ($)',
-                data: sorted.map(d => +((d.call_minutes || 0) * RATE).toFixed(2)),
-                borderColor: '#0056b3', backgroundColor: 'rgba(0,86,179,0.1)', tension: 0.3, fill: true
+                label: 'Tiempo conectado (min)',
+                data: sorted.map(d => d.available_minutes || 0),
+                borderColor: '#1f8a70', backgroundColor: 'rgba(31,138,112,0.1)', tension: 0.35, fill: true, borderWidth: 2.5
             },
             {
-                label: 'Ganancia por Min. Logueado ($)',
-                data: sorted.map(d => +((d.available_minutes || 0) * RATE).toFixed(2)),
-                borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.1)', tension: 0.3, fill: true
+                label: `Meta (${META_MINUTES} min)`,
+                data: sorted.map(() => META_MINUTES),
+                borderColor: '#b3822e', backgroundColor: 'rgba(179,130,46,0.1)', fill: false,
+                borderWidth: 2, borderDash: [6, 6], pointRadius: 0, pointHoverRadius: 0
             }
         ];
-        yTitle = 'USD ($)';
+        yTitle = 'Minutos conectados';
     } else if (chartMode === 'diff') {
         datasets = [
             {
                 label: 'Diferencia (Disponible − Llamada) min',
                 data: sorted.map(d => (d.available_minutes || 0) - (d.call_minutes || 0)),
-                borderColor: '#dc3545', backgroundColor: 'rgba(220,53,69,0.12)', tension: 0.3, fill: true
+                borderColor: '#bd5b4c', backgroundColor: 'rgba(189,91,76,0.12)', tension: 0.35, fill: true, borderWidth: 2.5
             },
             {
                 label: '% del día en espera',
@@ -615,29 +862,30 @@ function renderChart(data) {
                     if (avail === 0) return 0;
                     return +(((avail - (d.call_minutes || 0)) / avail) * 100).toFixed(1);
                 }),
-                borderColor: '#fd7e14', backgroundColor: 'rgba(253,126,20,0.1)', tension: 0.3, fill: false,
-                yAxisID: 'y1'
+                borderColor: '#b3822e', backgroundColor: 'rgba(179,130,46,0.1)', tension: 0.35, fill: false,
+                yAxisID: 'y1', borderWidth: 2.5
             }
         ];
         yTitle = 'Minutos / %';
     } else {
         datasets = [
             {
-                label: 'Minutos en Llamada',
+                label: 'Minutos en llamada',
                 data: sorted.map(d => d.call_minutes || 0),
-                borderColor: '#0056b3', backgroundColor: 'rgba(0,86,179,0.1)', tension: 0.3, fill: true
+                borderColor: '#6a5acd', backgroundColor: 'rgba(106,90,205,0.1)', tension: 0.35, fill: true, borderWidth: 2.5
             },
             {
-                label: 'Tiempo Disponible (conexión)',
+                label: 'Tiempo disponible (conexión)',
                 data: sorted.map(d => d.available_minutes || 0),
-                borderColor: '#28a745', backgroundColor: 'rgba(40,167,69,0.1)', tension: 0.3, fill: true
+                borderColor: '#1f8a70', backgroundColor: 'rgba(31,138,112,0.1)', tension: 0.35, fill: true, borderWidth: 2.5
             }
         ];
         yTitle = 'Minutos';
     }
 
     const scales = {
-        y: { beginAtZero: true, title: { display: true, text: yTitle } }
+        y: { beginAtZero: true, title: { display: true, text: yTitle }, grid: { color: 'rgba(43,38,32,0.06)' } },
+        x: { grid: { display: false } }
     };
     if (chartMode === 'diff') {
         scales.y1 = {
@@ -656,7 +904,9 @@ function renderChart(data) {
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
-            plugins: { legend: { position: 'top' } },
+            plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, font: { family: "'Plus Jakarta Sans'" } } } },
+            elements: { point: { radius: 3, hoverRadius: 5 } },
+            animation: { duration: 500, easing: 'easeOutQuint' },
             scales
         }
     });
@@ -676,13 +926,13 @@ function toggleReportDetail() {
 
 async function buildMonthChipsFromData() {
     const container = document.getElementById('monthChips');
-    container.innerHTML = '<span style="font-size:0.85rem;color:#666;">Cargando...</span>';
+    container.innerHTML = '<span style="font-size:0.85rem;color:var(--ink-faint);">Cargando…</span>';
 
     try {
         const res = await fetch('/api/logs?start=2020-01-01&end=2030-12-31');
         const logs = await res.json();
         if (!Array.isArray(logs) || logs.length === 0) {
-            container.innerHTML = '<span style="font-size:0.85rem;color:#666;">Sin datos aún</span>';
+            container.innerHTML = '<span style="font-size:0.85rem;color:var(--ink-faint);">Sin datos aún</span>';
             return;
         }
 
@@ -719,20 +969,13 @@ async function buildMonthChipsFromData() {
         loadPaymentComparison();
     } catch (e) {
         console.error(e);
-        container.innerHTML = '<span style="font-size:0.85rem;color:#666;">Error al cargar meses</span>';
+        container.innerHTML = '<span style="font-size:0.85rem;color:var(--ink-faint);">Error al cargar meses</span>';
     }
-}
-
-function togglePayDetail() {
-    isPayDetail = document.getElementById('payDetailSwitch').checked;
-    document.getElementById('paySummaryGeneral').classList.toggle('hidden', isPayDetail);
-    document.getElementById('paySummaryDetail').classList.toggle('hidden', !isPayDetail);
-    loadPaymentComparison();
 }
 
 async function loadPaymentComparison() {
     if (selectedMonths.size === 0) return;
-    let totalCallMins = 0, totalAvailMins = 0;
+    let totalCallMins = 0;
     for (const month of selectedMonths) {
         const [y, m] = month.split('-').map(Number);
         const lastDay = new Date(y, m, 0).getDate();
@@ -744,27 +987,22 @@ async function loadPaymentComparison() {
             if (Array.isArray(logs)) {
                 logs.forEach(l => {
                     totalCallMins += (l.call_minutes || 0);
-                    totalAvailMins += (l.available_minutes || 0);
                 });
             }
         } catch (e) { console.error(e); }
     }
-    const calcA = totalCallMins * RATE;
-    const calcB = totalAvailMins * RATE;
-    document.getElementById('calcEarnings').innerText = `$${calcA.toFixed(2)}`;
-    document.getElementById('calcA').innerText = `$${calcA.toFixed(2)}`;
-    document.getElementById('calcB').innerText = `$${calcB.toFixed(2)}`;
+    const calcEstimate = totalCallMins * RATE;
+    document.getElementById('calcEarnings').innerText = `$${calcEstimate.toFixed(2)}`;
+
     const firstMonth = [...selectedMonths][0];
     try {
         const resPay = await fetch(`/api/payments?month=${firstMonth}`);
         const payData = await resPay.json();
         if (payData && payData.amount_received != null) {
             document.getElementById('realPayment').value = payData.amount_received;
-            document.getElementById('realPaymentDetail').value = payData.amount_received;
-            calculateDiscrepancy(calcA, calcB, payData.amount_received);
+            calculateDiscrepancy(calcEstimate, payData.amount_received);
         } else {
             document.getElementById('realPayment').value = '';
-            document.getElementById('realPaymentDetail').value = '';
             document.getElementById('discrepancyBox').classList.add('hidden');
         }
     } catch (e) {}
@@ -772,9 +1010,7 @@ async function loadPaymentComparison() {
 
 async function savePayment() {
     if (selectedMonths.size === 0) return alert('Selecciona al menos un mes');
-    const amount = isPayDetail
-        ? parseFloat(document.getElementById('realPaymentDetail').value) || 0
-        : parseFloat(document.getElementById('realPayment').value) || 0;
+    const amount = parseFloat(document.getElementById('realPayment').value) || 0;
     const month = [...selectedMonths][0];
     try {
         const res = await fetch('/api/payments', {
@@ -788,29 +1024,21 @@ async function savePayment() {
     } catch (e) { alert('Error de red'); }
 }
 
-function calculateDiscrepancy(calcA, calcB, real) {
+function calculateDiscrepancy(estimate, real) {
     const box = document.getElementById('discrepancyBox');
     box.classList.remove('hidden', 'alert-good', 'alert-bad', 'alert-info');
-    const diffA = real - calcA;
-    const diffB = real - calcB;
-    if (Math.abs(diffA) < 0.5) {
-        box.innerHTML = `✅ <strong>Coincide con el modelo de Llamadas</strong> (Calc A). El proveedor paga solo por tiempo en llamada.`;
+    const diff = real - estimate;
+    if (Math.abs(diff) < 0.5) {
+        box.innerHTML = `✅ <strong>Coincide con el pago estimado</strong> por minutos en llamada.`;
         box.classList.add('alert-good');
-    } else if (Math.abs(diffB) < 0.5) {
-        box.innerHTML = `✅ <strong>Coincide con el modelo logueado</strong> (Calc B). El proveedor paga por tiempo total conectado.`;
-        box.classList.add('alert-good');
-    } else if (real < Math.min(calcA, calcB)) {
-        const loss = Math.min(calcA, calcB) - real;
+    } else if (diff < 0) {
+        const loss = Math.abs(diff);
         const minsLost = (loss / RATE).toFixed(0);
-        box.innerHTML = `⚠️ <strong>Déficit de Pago</strong><br>Faltan <strong>$${loss.toFixed(2)}</strong> respecto al modelo más bajo.<br>Equivale a aprox. <strong>${minsLost} minutos</strong> no pagados.`;
+        box.innerHTML = `⚠️ <strong>Déficit de pago</strong><br>Faltan <strong>$${loss.toFixed(2)}</strong> respecto al estimado por minutos en llamada.<br>Equivale a aprox. <strong>${minsLost} minutos</strong> no pagados.`;
         box.classList.add('alert-bad');
-    } else if (real > Math.max(calcA, calcB)) {
-        const surplus = real - Math.max(calcA, calcB);
-        box.innerHTML = `🎉 <strong>Superávit</strong><br>Te pagaron <strong>$${surplus.toFixed(2)}</strong> por encima del modelo más alto.`;
-        box.classList.add('alert-good');
     } else {
-        box.innerHTML = `ℹ️ El pago está <strong>entre ambos modelos</strong>.<br>Diferencia vs Llamadas: <strong>$${diffA.toFixed(2)}</strong> | vs Logueado: <strong>$${diffB.toFixed(2)}</strong>`;
-        box.classList.add('alert-info');
+        box.innerHTML = `🎉 <strong>Superávit</strong><br>Te pagaron <strong>$${diff.toFixed(2)}</strong> por encima del estimado por minutos en llamada.`;
+        box.classList.add('alert-good');
     }
 }
 
@@ -823,10 +1051,9 @@ function exportExcel() {
             'Min. Llamada': r.call_minutes || 0,
             'Llamadas': r.total_calls || 0,
             'Disponible': r.available_minutes || 0,
-            'Diferencia': (r.available_minutes || 0) - (r.call_minutes || 0),
+            'Diferencia': isWeekend(r.date) ? '-' : (r.available_minutes || 0) - (r.call_minutes || 0),
             'Promedio': r.total_calls > 0 ? +((r.call_minutes / r.total_calls).toFixed(1)) : 0,
-            'Gan. Llamada': +((r.call_minutes || 0) * RATE).toFixed(2),
-            'Gan. Logueado': +((r.available_minutes || 0) * RATE).toFixed(2)
+            'Gan. Llamada': +((r.call_minutes || 0) * RATE).toFixed(2)
         }));
     } else {
         rows = currentLogs.map(r => ({
@@ -868,14 +1095,14 @@ function exportPDF() {
     doc.setTextColor(0);
 
     const head = isReportDetail
-        ? [['Fecha','Min.Llam','#Llam','Dispon.','Difer.','Prom.','Gan.Llam','Gan.Log']]
+        ? [['Fecha','Min.Llam','#Llam','Dispon.','Difer.','Prom.','Gan.Llam']]
         : [['Fecha','Min.Llam','#Llam','Dispon.','Promedio','Ganancia']];
     const body = currentLogs.map(r => {
         const call = r.call_minutes || 0;
         const calls = r.total_calls || 0;
         const avail = r.available_minutes || 0;
         const avg = calls > 0 ? (call/calls).toFixed(1) : '0';
-        if (isReportDetail) return [r.date, call, calls, avail, avail-call, avg, (call*RATE).toFixed(2), (avail*RATE).toFixed(2)];
+        if (isReportDetail) return [r.date, call, calls, avail, isWeekend(r.date) ? '-' : avail-call, avg, (call*RATE).toFixed(2)];
         return [r.date, call, calls, avail, avg, (call*RATE).toFixed(2)];
     });
 
@@ -883,12 +1110,12 @@ function exportPDF() {
         head, body,
         startY: 30,
         styles: { fontSize: 8 },
-        headStyles: { fillColor: [0, 51, 102] }
+        headStyles: { fillColor: [106, 90, 205] }
     });
 
     let y = doc.lastAutoTable.finalY + 12;
     doc.setFontSize(12);
-    doc.setTextColor(0, 51, 102);
+    doc.setTextColor(106, 90, 205);
     doc.text('Resumen de estadísticas', 14, y);
     doc.setTextColor(0);
     y += 8;
@@ -913,7 +1140,7 @@ function exportPDF() {
         y += 6;
     }
     doc.text(`Variación diaria: ${variation}`, 14, y);
-    doc.text(`Meta 6h: ${overtime}`, 100, y);
+    doc.text(`Meta ${META_MINUTES} min: ${overtime}`, 100, y);
 
     y += 14;
     doc.setFontSize(9);
