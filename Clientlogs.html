@@ -325,6 +325,23 @@
             border: 1px solid var(--amber-border); text-transform: uppercase; letter-spacing: 0.04em;
         }
 
+        .form-layout { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 26px; align-items: start; }
+        .form-main { min-width: 0; }
+        .status-side {
+            background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+            padding: 14px; display: flex; flex-direction: column; gap: 8px;
+        }
+        .status-side label { margin: 0; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); }
+        .status-side select { padding: 8px 10px; font-size: 0.88rem; }
+        .btn-sm { padding: 8px 14px; font-size: 0.8rem; width: 100%; box-shadow: none; }
+        .btn-sm:hover:not(:disabled) { box-shadow: 0 6px 14px rgba(106, 90, 205, 0.3); }
+        .status-side .field-hint { margin-top: 0; }
+        .field-hint.ok { color: var(--green); }
+        .field-hint.err { color: var(--red); }
+        @media (max-width: 760px) {
+            .form-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+        }
+
         .export-btns { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 22px; }
 
         .site-footer {
@@ -350,6 +367,9 @@
     <!-- Formulario Nuevo Registro -->
     <div class="card">
         <h2><span><span class="eyebrow">Registro individual</span>Nueva Llamada</span></h2>
+
+        <div class="form-layout">
+        <div class="form-main">
 
         <div class="grid-2" style="gap:12px;">
             <div class="form-group">
@@ -388,6 +408,20 @@
 
         <button id="btnSave" onclick="saveCall()" style="width:100%;">Guardar llamada</button>
         <div id="saveFeedback" class="hidden" style="margin-top:14px;"></div>
+        </div>
+
+        <aside class="status-side" aria-label="Registro de estado">
+            <label for="statusSelect">Estado</label>
+            <select id="statusSelect" autocomplete="off">
+                <option value="" selected>---</option>
+                <option value="online">En línea</option>
+                <option value="break">Descanso</option>
+                <option value="offline">Fuera de línea</option>
+            </select>
+            <button id="btnStatus" class="btn-sm" onclick="saveStatus()" disabled>Guardar</button>
+            <div class="field-hint" id="statusHint"></div>
+        </aside>
+        </div>
     </div>
 
     <!-- Panel de Reportes -->
@@ -529,13 +563,26 @@ const DEFAULT_CALL_TYPES = [
     'Education / Parent-Teacher'
 ];
 const UNLABELED = 'Sin tipo';
-const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie']; // sábados, domingos y feriados nunca entran al Timesheet
+
+// ---------- Reglas del Timesheet (minutos desde 00:00) ----------
+const DAY_RULES = {
+    LUNCH_FROM: 13 * 60,      // franja de almuerzo: 1:00 PM
+    LUNCH_TO: 15 * 60,        // ... a 3:00 PM
+    GAP_BREAK_LUNCH: 30,      // pausa entre llamadas mayor a esto, dentro de la franja de almuerzo = Break / Almuerzo
+    GAP_BREAK_OTHER: 30,      // ... y fuera de esa franja. La especificación menciona 30 min y también 40 min en cualquier
+                              // hora: con 30 en ambos lugares la regla de 40 queda cubierta. Si quieres 40 fuera del
+                              // almuerzo, cambia este valor a 40.
+    END_OF_DAY_FROM: 15 * 60, // desde las 3:00 PM una llamada seguida de más de ...
+    END_OF_DAY_GAP: 30        // ... 30 min sin actividad cierra la jornada al terminar esa llamada
+};
+const INCLUDE_OBSERVED_HOLIDAYS = false; // true = también excluir el viernes/lunes en que se "observa" un feriado de fin de semana
 
 const GRID = 'rgba(43,38,32,0.06)';
 const FONT = { family: "'Plus Jakarta Sans'" };
 
 // Cuántas vistas tiene cada tarjeta. Cada clic avanza una vista y, al final, regresa a la base.
-const CARD_MODES = { hours: 2, clients: 3, types: 2, timesheet: 2, lowClients: 2 };
+const CARD_MODES = { hours: 2, clients: 3, types: 3, timesheet: 2, lowClients: 2 };
 const cardMode = { hours: 0, clients: 0, types: 0, timesheet: 0, lowClients: 0 };
 const CARD_META = {
     hours: [
@@ -548,12 +595,13 @@ const CARD_META = {
         'A qué horas llaman con más frecuencia los 10 clientes con más llamadas'
     ],
     types: [
-        'Distribución real según la base de datos',
-        'Llamadas sin tipo clasificadas automáticamente por ID de cliente'
+        'Tipos literales, tal cual están guardados en la base de datos',
+        'Llamadas sin tipo clasificadas por el tipo más frecuente de su ID de cliente',
+        'Macro-categorías por palabras clave'
     ],
     timesheet: [
-        'Ocupación por día de la semana y hora (tamaño = minutos en llamada, tono = % de ocupación)',
-        'Tiempo en línea (inferido) vs. tiempo en llamada por hora'
+        'Ocupación por día y hora (tamaño = minutos en llamada, tono = % de ocupación)',
+        'Minutos en línea por hora: en llamada + espera, y % de ocupación'
     ],
     lowClients: [
         'Los 10 clientes con menos minutos',
@@ -563,7 +611,10 @@ const CARD_META = {
 
 let currentCalls = [];
 let historyCalls = [];
+let statusLogs = [];
 let clientTypeIndex = new Map();
+let typeResolved = new Map();   // clave de tipo -> ruta jerárquica completa a mostrar
+let typeSpelling = new Map();   // clave de tipo -> ortografía preferida
 const charts = { main: null, clients: null, types: null, hours: null, timesheet: null, lowClients: null };
 let chartMode = 'minutes'; // 'minutes' | 'calls' | 'avg' | 'earnings'
 let isReportDetail = false;
@@ -635,6 +686,78 @@ function formatHourLabel(h) {
     if (hour < 12) return `${hour} AM`;
     if (hour === 12) return '12 PM';
     return `${hour - 12} PM`;
+}
+
+
+// ---------- Días no laborables: fines de semana + feriados federales de EE. UU. ----------
+const _holidayCache = {};
+
+function ymdStr(y, m0, d) { return new Date(Date.UTC(y, m0, d)).toISOString().slice(0, 10); }
+
+// Día del mes del n-ésimo `weekday` (0 = domingo ... 6 = sábado) de un mes.
+function nthWeekdayDate(y, m0, weekday, n) {
+    const first = new Date(Date.UTC(y, m0, 1)).getUTCDay();
+    return 1 + ((weekday - first + 7) % 7) + (n - 1) * 7;
+}
+function lastWeekdayDate(y, m0, weekday) {
+    const lastDay = new Date(Date.UTC(y, m0 + 1, 0)).getUTCDate();
+    const lastDow = new Date(Date.UTC(y, m0, lastDay)).getUTCDay();
+    return lastDay - ((lastDow - weekday + 7) % 7);
+}
+
+function usFederalHolidays(year) {
+    if (_holidayCache[year]) return _holidayCache[year];
+    const map = new Map();
+    const fixed = (m0, d, name) => {
+        map.set(ymdStr(year, m0, d), name);
+        if (INCLUDE_OBSERVED_HOLIDAYS) {
+            const dow = new Date(Date.UTC(year, m0, d)).getUTCDay();
+            if (dow === 6 && !(m0 === 0 && d === 1)) map.set(ymdStr(year, m0, d - 1), `${name} (observado)`);
+            if (dow === 0) map.set(ymdStr(year, m0, d + 1), `${name} (observado)`);
+        }
+    };
+    fixed(0, 1, 'Año Nuevo');
+    map.set(ymdStr(year, 0, nthWeekdayDate(year, 0, 1, 3)), 'Día de Martin Luther King Jr.');
+    map.set(ymdStr(year, 1, nthWeekdayDate(year, 1, 1, 3)), 'Día de los Presidentes');
+    map.set(ymdStr(year, 4, lastWeekdayDate(year, 4, 1)), 'Memorial Day');
+    fixed(5, 19, 'Juneteenth');
+    fixed(6, 4, 'Día de la Independencia');
+    map.set(ymdStr(year, 8, nthWeekdayDate(year, 8, 1, 1)), 'Labor Day');
+    map.set(ymdStr(year, 9, nthWeekdayDate(year, 9, 1, 2)), "Columbus Day / Indigenous Peoples' Day");
+    fixed(10, 11, 'Veterans Day');
+    map.set(ymdStr(year, 10, nthWeekdayDate(year, 10, 4, 4)), 'Thanksgiving Day');
+    fixed(11, 25, 'Navidad');
+    // Si el 1 de enero del año siguiente cae en sábado, se observa el 31 de diciembre de este año.
+    if (INCLUDE_OBSERVED_HOLIDAYS && new Date(Date.UTC(year + 1, 0, 1)).getUTCDay() === 6) {
+        map.set(ymdStr(year, 11, 31), 'Año Nuevo (observado)');
+    }
+    _holidayCache[year] = map;
+    return map;
+}
+
+// Devuelve el motivo por el que un día no cuenta para métricas de tiempo, o null si es laboral.
+function nonWorkingReason(dateStr) {
+    const ds = String(dateStr == null ? '' : dateStr).slice(0, 10);
+    const [y, m, d] = ds.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+    if (dow === 0) return 'Domingo';
+    if (dow === 6) return 'Sábado';
+    return usFederalHolidays(y).get(ds) || null;
+}
+
+// Separa los registros de días laborales; los de fines de semana y feriados solo cuentan para dinero y tabla.
+function splitWorkingDays(data) {
+    const work = [];
+    const excluded = new Set();
+    data.forEach(r => {
+        if (nonWorkingReason(r.call_date)) excluded.add(r.call_date);
+        else work.push(r);
+    });
+    return { work, excludedDays: excluded.size };
+}
+function exclusionNote(n) {
+    return n ? `Excluye ${n} día${n === 1 ? '' : 's'} no laborable${n === 1 ? '' : 's'} (fines de semana y feriados de EE. UU.).` : '';
 }
 
 // ---------- Normalización de registros ----------
@@ -712,27 +835,132 @@ function effectiveType(r) {
     return '';
 }
 
-// ---------- Lista dinámica de tipos de llamada ----------
-function buildCallTypeList() {
-    const map = new Map(); // minúsculas -> { label, count }
+// ---------- Tipos de llamada: normalización, dropdown único y jerarquías ----------
+// Quita espacios sobrantes y unifica el formato de las barras: "A/B" y "A /  B" pasan a "A / B".
+function canonType(t) {
+    return String(t == null ? '' : t)
+        .split('/')
+        .map(p => p.replace(/\s+/g, ' ').trim())
+        .filter(Boolean)
+        .join(' / ');
+}
+function typeKey(t) { return canonType(t).toLowerCase(); }
+
+// Estadísticas por tipo único (sin distinguir mayúsculas ni espacios extra).
+function collectTypeStats() {
+    const stats = new Map(); // clave -> { count, variants: Map(ortografía -> veces), label }
     dedupeCalls([...historyCalls, ...currentCalls]).forEach(r => {
-        if (!r._type) return;
-        const k = r._type.toLowerCase();
-        if (!map.has(k)) map.set(k, { label: r._type, count: 0 });
-        map.get(k).count += 1;
+        const canon = canonType(r._type);
+        if (!canon) return;
+        const k = canon.toLowerCase();
+        if (!stats.has(k)) stats.set(k, { count: 0, variants: new Map(), label: canon });
+        const s = stats.get(k);
+        s.count += 1;
+        s.variants.set(canon, (s.variants.get(canon) || 0) + 1);
     });
+    stats.forEach(s => {
+        let best = null;
+        s.variants.forEach((n, spelling) => {
+            if (!best || n > best.n || (n === best.n && spelling.localeCompare(best.spelling) < 0)) best = { spelling, n };
+        });
+        s.label = best.spelling;
+    });
+    return stats;
+}
+
+function buildCallTypeList() {
+    const stats = collectTypeStats();
+    const items = new Map();
+    stats.forEach((s, k) => items.set(k, { label: s.label, count: s.count }));
     DEFAULT_CALL_TYPES.forEach(t => {
-        const k = t.toLowerCase();
-        if (!map.has(k)) map.set(k, { label: t, count: 0 });
+        const c = canonType(t);
+        if (!items.has(c.toLowerCase())) items.set(c.toLowerCase(), { label: c, count: 0 });
     });
-    const items = [...map.values()].sort((a, b) => (b.count - a.count) || a.label.localeCompare(b.label));
+    typeSpelling = new Map([...items].map(([k, v]) => [k, v.label]));
+
+    const sorted = [...items.values()].sort((a, b) => (b.count - a.count) || a.label.localeCompare(b.label));
     const list = $('callTypeList');
     list.innerHTML = '';
-    items.forEach(it => {
+    sorted.forEach(it => {
         const opt = document.createElement('option');
         opt.value = it.label;
         list.appendChild(opt);
     });
+}
+
+// Al guardar, reutiliza la ortografía ya existente si el tipo solo difiere en mayúsculas/espacios.
+function resolveTypeSpelling(raw) {
+    const c = canonType(raw);
+    return typeSpelling.get(c.toLowerCase()) || c;
+}
+
+// Si una ruta es prefijo (por segmentos) de otra más larga, se muestra la ruta más completa.
+// Con varias extensiones posibles se elige la más frecuente.
+function buildTypeTaxonomy() {
+    const entries = [...collectTypeStats().entries()].map(([key, s]) => ({
+        key, segs: key.split(' / '), count: s.count, label: s.label
+    }));
+    const memo = new Map();
+    const resolve = (e) => {
+        if (memo.has(e.key)) return memo.get(e.key);
+        const ext = entries.filter(o => o.segs.length > e.segs.length && e.segs.every((seg, i) => o.segs[i] === seg));
+        let result = e;
+        if (ext.length) {
+            ext.sort((a, b) => (b.count - a.count) || (b.segs.length - a.segs.length) || a.key.localeCompare(b.key));
+            result = resolve(ext[0]);
+        }
+        memo.set(e.key, result);
+        return result;
+    };
+    typeResolved = new Map(entries.map(e => [e.key, resolve(e).label]));
+}
+
+function displayType(r) {
+    const t = effectiveType(r);
+    if (!t) return '';
+    return typeResolved.get(typeKey(t)) || canonType(t);
+}
+
+function refreshTypeModels() {
+    rebuildClientTypeIndex();
+    buildTypeTaxonomy();
+    buildCallTypeList();
+}
+
+// ---------- Macro-categorías por palabras clave ----------
+// El orden importa: gana la primera regla que coincida (p. ej. "Medical Appointments / Scheduling" es Healthcare).
+const MACRO_RULES = [
+    { cat: 'Emergency Services', re: /\b(?:911|emergenc\w*|ambulance\w*|paramedic\w*|police|fire\s?department)\b/i },
+    { cat: 'Healthcare', re: /\b(?:medical|medicine|medication\w*|health\s?care|health|pediatric\w*|ob-?\s?gyn|gyn\w*|consult\w*|questionnaire\w*|clinic\w*|hospital\w*|doctor\w*|physician\w*|pharmac\w*|dental|dentist\w*|labs?|prescription\w*|labor and delivery|maternity|patient\w*|nurs\w*|therap\w*|mental|vaccin\w*|surg\w*|procedure\w*|radiolog\w*|referral\w*|urgent care|primary care|specialist\w*|telehealth|telemedicine)\b/i },
+    { cat: 'Government Programs', re: /\b(?:government\w*|medicaid|medicare|social security|welfare|social services?|snap|wic|food stamps?|unemployment|housing|tanf|ssi|ssdi|dmv|irs)\b/i },
+    { cat: 'Insurance', re: /\b(?:insurance|claims?|coverage|premiums?|co-?pay\w*|deductible\w*|polic(?:y|ies)|underwriting)\b/i },
+    { cat: 'Government Programs', re: /\b(?:benefits?|state|department|county|federal)\b/i },
+    { cat: 'Financial & Banking', re: /\b(?:financ\w*|banking|bank|loans?|credit|mortgage|payments?|billing|invoice\w*|balance|transfer|debit|tax\w*)\b/i },
+    { cat: 'Scheduling & Transport', re: /\b(?:rides?|re-?schedul\w*|schedul\w*|transport\w*|appointment\w*|taxi|uber|lyft|shuttle|trip\w*|booking|reservation\w*|pick-?up|drop-?off)\b/i },
+    { cat: 'Legal & Courts', re: /\b(?:legal|court|deposition\w*|attorney\w*|lawyer\w*|law|judge|subpoena\w*|hearing|arbitration|lawsuit)\b/i },
+    { cat: 'Education', re: /\b(?:education\w*|school\w*|parent-?\s?teacher|teacher\w*|student\w*|college|university|tutor\w*)\b/i },
+    { cat: 'Tech Support', re: /\b(?:tech\w*|software|hardware|password\w*|log-?in|internet|wi-?fi|network|computer|device\w*|troubleshoot\w*)\b/i },
+    { cat: 'Customer Service', re: /\b(?:customer|inquir\w*|complaint\w*|general|information|feedback|orders?|support)\b/i }
+];
+const MACRO_COLORS = {
+    'Healthcare': '#1f8a70',
+    'Scheduling & Transport': '#6a5acd',
+    'Government Programs': '#b3822e',
+    'Insurance': '#52439e',
+    'Financial & Banking': '#4f8f5e',
+    'Emergency Services': '#bd5b4c',
+    'Legal & Courts': '#8b7fd4',
+    'Education': '#c9a04a',
+    'Tech Support': '#3a9b8a',
+    'Customer Service': '#d47a6b',
+    'Other': '#7c9a6e'
+};
+
+function macroCategory(type) {
+    const t = canonType(type);
+    if (!t) return UNLABELED;
+    const hit = MACRO_RULES.find(r => r.re.test(t));
+    return hit ? hit.cat : 'Other';
 }
 
 async function refreshHistory() {
@@ -743,8 +971,7 @@ async function refreshHistory() {
     } catch (e) {
         console.error(e);
     }
-    rebuildClientTypeIndex();
-    buildCallTypeList();
+    refreshTypeModels();
     if (cardMode.types === 1) {
         renderTable(currentCalls);
         if (isReportDetail) renderTypesChart(currentCalls);
@@ -756,6 +983,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('filterEnd').value = todayISO();
     $('filterStart').value = daysAgoISO(7);
     resetForm();
+
+    // Estado neutro ("---") al cargar o recargar, aunque el navegador intente recordar la selección.
+    $('statusSelect').value = '';
+    $('btnStatus').disabled = true;
+    $('statusSelect').addEventListener('change', () => {
+        $('btnStatus').disabled = !STATUS_VALUES.has($('statusSelect').value);
+        setStatusHint('', null);
+    });
 
     $('callMinutes').addEventListener('input', updateCallEstimate);
     ['callDate', 'callTime'].forEach(id => {
@@ -835,7 +1070,7 @@ function updateCallEstimate() {
 
 async function saveCall() {
     const client_id = ($('clientId').value || '').trim();
-    const call_type = ($('callType').value || '').trim();
+    const call_type = resolveTypeSpelling($('callType').value || '');
     const call_date = $('callDate').value;
     const timeParsed = parseTime($('callTime').value);
     const call_minutes_raw = $('callMinutes').value;
@@ -890,16 +1125,101 @@ function showFeedback(msg, ok) {
     el.classList.remove('hidden');
 }
 
+// ---------- Registro de estado (endpoint independiente /api/status) ----------
+const STATUS_LABELS = { online: 'En línea', break: 'Descanso', offline: 'Fuera de línea' };
+const STATUS_VALUES = new Set(['online', 'break', 'offline']);
+
+// Lee "YYYY-MM-DDTHH:MM:SS" como hora LOCAL (sin convertir zonas horarias).
+function parseStamp(ts) {
+    const m = String(ts == null ? '' : ts).match(/^(\d{4}-\d{2}-\d{2})[T ](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) return null;
+    const h = parseInt(m[2], 10), mi = parseInt(m[3], 10), s = m[4] ? parseInt(m[4], 10) : 0;
+    if (h > 23 || mi > 59 || s > 59) return null;
+    return { date: m[1], min: h * 60 + mi + s / 60 };
+}
+
+function enrichStatus(r) {
+    const st = String(r && r.status != null ? r.status : '').trim().toLowerCase();
+    if (!STATUS_VALUES.has(st)) return null;
+    const p = parseStamp(r.timestamp);
+    if (!p) return null;
+    return { ...r, status: st, _date: p.date, _min: p.min };
+}
+
+// GET /api/status devuelve un arreglo directo. Si el endpoint aún no existe o falla, la app sigue con solo llamadas.
+async function fetchStatuses(start, end) {
+    try {
+        const res = await fetch(`/api/status?start=${start}&end=${end}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        if (!Array.isArray(data)) return [];
+        return data.map(enrichStatus).filter(Boolean)
+            .filter(r => (!start || r._date >= start) && (!end || r._date <= end))
+            .sort((a, b) => a._date.localeCompare(b._date) || (a._min - b._min) || ((Number(a.id) || 0) - (Number(b.id) || 0)));
+    } catch (e) {
+        console.warn('No se pudo leer /api/status', e);
+        return [];
+    }
+}
+
+async function refreshStatuses() {
+    statusLogs = await fetchStatuses($('filterStart').value, $('filterEnd').value);
+    if (isReportDetail) renderTimesheetChart(currentCalls);
+}
+
+function setStatusHint(msg, kind) {
+    const el = $('statusHint');
+    el.textContent = msg;
+    el.classList.remove('ok', 'err');
+    if (kind) el.classList.add(kind);
+}
+
+// Solo guarda el log con la fecha y hora exactas del momento; no hay cronómetros.
+async function saveStatus() {
+    const status = $('statusSelect').value;
+    if (!STATUS_VALUES.has(status)) return;
+    const now = new Date();
+    const timestamp = `${localISO(now)}T${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
+
+    const btn = $('btnStatus');
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+        const res = await fetch('/api/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status, timestamp })
+        });
+        let result = {};
+        try { result = await res.json(); } catch (_) { /* respuesta sin cuerpo */ }
+        if (res.ok && !result.error) {
+            setStatusHint(`✔ ${STATUS_LABELS[status]} · ${format12(localHHMM(now))}`, 'ok');
+            $('statusSelect').value = '';
+            await refreshStatuses();
+        } else {
+            setStatusHint(`✖ ${result.error || 'No se pudo guardar'}`, 'err');
+        }
+    } catch (e) {
+        setStatusHint('✖ Error de red', 'err');
+    } finally {
+        btn.textContent = 'Guardar';
+        btn.disabled = !$('statusSelect').value;
+    }
+}
+
 // ---------- Carga de reportes ----------
 async function loadReports() {
     const start = $('filterStart').value;
     const end = $('filterEnd').value;
     try {
-        const res = await fetch(`/api/calls?start=${start}&end=${end}`);
+        const [res, statuses] = await Promise.all([
+            fetch(`/api/calls?start=${start}&end=${end}`),
+            fetchStatuses(start, end)
+        ]);
         const data = await res.json();
         currentCalls = Array.isArray(data) ? data.map(enrich) : [];
-        rebuildClientTypeIndex();
-        buildCallTypeList();
+        statusLogs = statuses;
+        refreshTypeModels();
         updateSummary(currentCalls);
         renderTable(currentCalls);
         if (isReportDetail) renderDetailedCharts(currentCalls);
@@ -1110,7 +1430,9 @@ function busyByHour(r) {
 }
 
 // ---- Tendencia Horaria ----
-function renderHoursChart(data) {
+function renderHoursChart(allData) {
+    const { work: data, excludedDays } = splitWorkingDays(allData);
+    setCaption('hours', exclusionNote(excludedDays));
     const labels = Array.from({ length: 24 }, (_, i) => formatHourLabel(i));
     const xScale = { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } };
 
@@ -1228,7 +1550,9 @@ function hBarConfig(rows, by, label, bg, border) {
     };
 }
 
-function renderTopClientsChart(data) {
+function renderTopClientsChart(allData) {
+    const data = allData;
+    if (cardMode.clients !== 2) setCaption('clients', '');
     if (cardMode.clients === 0) {
         mkChart('clients', 'chartTopClients',
             hBarConfig(rankClients(data, 'minutes', 'desc'), 'minutes', 'Minutos totales', 'rgba(106,90,205,0.65)', '#6a5acd'));
@@ -1241,10 +1565,12 @@ function renderTopClientsChart(data) {
     }
 
     // Vista 3: frecuencia horaria de los 10 clientes con más llamadas
-    const top = rankClients(data, 'calls', 'desc');
+    const { work, excludedDays } = splitWorkingDays(allData);
+    setCaption('clients', exclusionNote(excludedDays));
+    const top = rankClients(work, 'calls', 'desc');
     const topIds = top.map(t => t.id);
     const counts = {};
-    data.forEach(r => {
+    work.forEach(r => {
         if (!r._time || !topIds.includes(r._client)) return;
         const k = `${r._client}|${r._time.h}`;
         counts[k] = (counts[k] || 0) + 1;
@@ -1300,8 +1626,16 @@ function renderLowClientsChart(data) {
 // ---- Distribución por tipo ----
 function renderTypesChart(data) {
     const byType = {};
+    const macroMode = cardMode.types === 2;
+    const otherTypes = {};
     data.forEach(r => {
-        const t = effectiveType(r) || UNLABELED;
+        let t;
+        if (macroMode) {
+            t = macroCategory(r._type);
+            if (t === 'Other') { const c = canonType(r._type); otherTypes[c] = (otherTypes[c] || 0) + 1; }
+        } else {
+            t = effectiveType(r) || UNLABELED;
+        }
         byType[t] = (byType[t] || 0) + 1;
     });
 
@@ -1315,7 +1649,11 @@ function renderTypesChart(data) {
 
     const palette = ['#6a5acd', '#1f8a70', '#b3822e', '#bd5b4c', '#4f8f5e', '#52439e', '#3a9b8a', '#c9a04a', '#d47a6b', '#7c9a6e', '#8b7fd4'];
     let p = 0;
-    const colors = labels.map(l => l === UNLABELED ? '#cfc6b4' : palette[p++ % palette.length]);
+    const colors = labels.map(l => {
+        if (l === UNLABELED) return '#cfc6b4';
+        if (macroMode && MACRO_COLORS[l]) return MACRO_COLORS[l];
+        return palette[p++ % palette.length];
+    });
 
     mkChart('types', 'chartTypes', {
         type: 'doughnut',
@@ -1333,6 +1671,15 @@ function renderTypesChart(data) {
         }
     });
 
+    if (macroMode) {
+        const distinct = new Set(data.filter(r => r._type).map(r => typeKey(r._type))).size;
+        const cats = labels.filter(l => l !== UNLABELED).length;
+        const others = Object.entries(otherTypes).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([t]) => t);
+        setCaption('types', `${distinct} tipo${distinct === 1 ? '' : 's'} distinto${distinct === 1 ? '' : 's'} agrupado${distinct === 1 ? '' : 's'} en ${cats} categoría${cats === 1 ? '' : 's'}.`
+            + (others.length ? ` Sin categoría (Other): ${others.join(', ')}.` : ''));
+        return;
+    }
+
     const unlabeled = data.filter(r => !r._type);
     if (!unlabeled.length) { setCaption('types', ''); return; }
     if (cardMode.types === 1) {
@@ -1340,56 +1687,180 @@ function renderTypesChart(data) {
         const rest = unlabeled.length - assigned;
         setCaption('types', `${assigned} de ${unlabeled.length} llamadas sin tipo se clasificaron según el tipo más frecuente de su ID de cliente${rest ? ` · ${rest} sin historial clasificado` : ''}.`);
     } else {
-        setCaption('types', `${unlabeled.length} llamada${unlabeled.length === 1 ? '' : 's'} sin tipo. Haz clic para clasificarlas automáticamente.`);
+        setCaption('types', `${unlabeled.length} llamada${unlabeled.length === 1 ? '' : 's'} sin tipo. Haz clic para ver otras vistas.`);
     }
 }
 
 // ---- Timesheet / densidad de ocupación ----
-// El "tiempo en línea" no se registra en CallTrack: se infiere por día, desde el inicio de la primera
-// llamada hasta el final de la última. La ocupación = minutos en llamada / minutos en línea (inferidos).
-function computeOccupancy(data) {
-    const busy = Array.from({ length: 7 }, () => Array(24).fill(0));
-    const online = Array.from({ length: 7 }, () => Array(24).fill(0));
-    const byDate = {};
-    data.forEach(r => {
-        if (!r._time) return;
-        if (!byDate[r.call_date]) byDate[r.call_date] = [];
-        byDate[r.call_date].push(r);
+// Modelo por día (solo días laborales). Todo en minutos desde las 00:00.
+//  - Fin de llamada = inicio + duración.
+//  - Inicio de jornada: el log "online" previo a la primera llamada; si no hay, el inicio de la primera llamada.
+//  - Break manual: desde el log "break" hasta el siguiente log "online"/"offline" o, si antes llega una llamada,
+//    hasta el inicio de esa llamada (regreso automático).
+//  - Pausa entre dos llamadas sin ningún log en medio y mayor al umbral = Break / Almuerzo automático.
+//  - Desde las 3:00 PM, una llamada seguida de más de 30 min sin actividad cierra la jornada al terminar esa llamada;
+//    una llamada posterior reinicia la jornada.
+//  - En línea = jornada - breaks. Espera = en línea - en llamada. Ocupación = en llamada / en línea.
+function mergeIntervals(list) {
+    const arr = list.map(x => [x[0], x[1]]).sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+    const out = [];
+    arr.forEach(iv => {
+        const last = out[out.length - 1];
+        if (last && iv[0] <= last[1]) last[1] = Math.max(last[1], iv[1]);
+        else out.push(iv);
     });
-    Object.keys(byDate).forEach(date => {
-        const wd = weekdayIndex(date);
-        let spanStart = Infinity, spanEnd = 0;
-        byDate[date].forEach(r => {
-            spanStart = Math.min(spanStart, r._time.minutesOfDay);
-            spanEnd = Math.max(spanEnd, Math.min(1440, r._time.minutesOfDay + r._mins));
-            busyByHour(r).forEach(([h, m]) => { busy[wd][h] += m; });
+    return out;
+}
+
+function subtractIntervals(base, cuts) {
+    const c = mergeIntervals(cuts);
+    const out = [];
+    base.forEach(([a, b]) => {
+        let cur = a;
+        c.forEach(([x, y]) => {
+            if (y <= cur || x >= b) return;
+            if (x > cur) out.push([cur, x]);
+            cur = Math.max(cur, y);
         });
-        for (let h = 0; h < 24; h++) {
-            const overlap = Math.min(spanEnd, (h + 1) * 60) - Math.max(spanStart, h * 60);
-            if (overlap > 0) online[wd][h] += overlap;
+        if (cur < b) out.push([cur, b]);
+    });
+    return out;
+}
+
+function addToHours(arr, a, b) {
+    for (let h = Math.floor(a / 60); h < 24 && h * 60 < b; h++) {
+        const lo = Math.max(a, h * 60);
+        const hi = Math.min(b, (h + 1) * 60);
+        if (hi > lo) arr[h] += hi - lo;
+    }
+}
+
+function nowMinutes() {
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+}
+
+function gapBreakThreshold(a, b) {
+    const overlapsLunch = a < DAY_RULES.LUNCH_TO && b > DAY_RULES.LUNCH_FROM;
+    return overlapsLunch ? DAY_RULES.GAP_BREAK_LUNCH : DAY_RULES.GAP_BREAK_OTHER;
+}
+
+// calls: registros enriquecidos del día; logs: estados del día ordenados; liveNow: minutos actuales si el día es hoy, si no null.
+function buildDayTimeline(calls, logs, liveNow) {
+    const blocks = mergeIntervals(calls.map(r => [r._time.minutesOfDay, Math.min(1440, r._time.minutesOfDay + r._mins)]));
+
+    const events = [];
+    blocks.forEach(b => events.push({ type: 'call', t: b[0], s: b[0], e: b[1] }));
+    logs.forEach((l, idx) => {
+        let t = l._min;
+        const inside = blocks.find(b => t > b[0] && t < b[1]);
+        if (inside) t = inside[1]; // un cambio de estado durante una llamada surte efecto al terminarla
+        events.push({ type: 'log', t, status: l.status, order: idx });
+    });
+    events.sort((x, y) => (x.t - y.t) || ((x.type === 'log' ? 0 : 1) - (y.type === 'log' ? 0 : 1)) || ((x.order || 0) - (y.order || 0)));
+
+    let mode = 'closed';       // 'closed' | 'online' | 'break'
+    let sessStart = 0, brkStart = 0, lastT = 0;
+    const sessions = [];
+    const breaks = [];
+
+    events.forEach((ev, i) => {
+        if (ev.type === 'log') {
+            lastT = Math.max(lastT, ev.t);
+            if (ev.status === 'online') {
+                if (mode === 'closed') { mode = 'online'; sessStart = ev.t; }
+                else if (mode === 'break') { breaks.push([brkStart, ev.t]); mode = 'online'; }
+            } else if (ev.status === 'break') {
+                if (mode === 'online') { mode = 'break'; brkStart = ev.t; }
+            } else if (ev.status === 'offline') {
+                if (mode === 'break') { breaks.push([brkStart, ev.t]); sessions.push([sessStart, ev.t]); mode = 'closed'; }
+                else if (mode === 'online') { sessions.push([sessStart, ev.t]); mode = 'closed'; }
+            }
+            return;
+        }
+
+        // Llamada: abre la jornada si estaba cerrada y, si venía de un break, lo termina (regreso automático)
+        if (mode === 'closed') { mode = 'online'; sessStart = ev.s; }
+        else if (mode === 'break') { breaks.push([brkStart, ev.s]); mode = 'online'; }
+        lastT = Math.max(lastT, ev.e);
+
+        const next = events[i + 1];
+        if (!next) {
+            let end = ev.e;
+            if (liveNow !== null && liveNow - ev.e <= DAY_RULES.END_OF_DAY_GAP) end = Math.max(ev.e, liveNow);
+            sessions.push([sessStart, end]);
+            mode = 'closed';
+        } else if (next.type === 'call') {
+            const gap = next.s - ev.e;
+            if (ev.s >= DAY_RULES.END_OF_DAY_FROM && gap > DAY_RULES.END_OF_DAY_GAP) {
+                sessions.push([sessStart, ev.e]);
+                mode = 'closed';
+            } else if (gap > gapBreakThreshold(ev.e, next.s)) {
+                breaks.push([ev.e, next.s]); // Break / Almuerzo automático
+            }
         }
     });
-    return { busy, online };
+
+    if (mode === 'online') sessions.push([sessStart, liveNow !== null ? Math.max(lastT, liveNow) : lastT]);
+    else if (mode === 'break') sessions.push([sessStart, brkStart]); // descanso sin regreso: la jornada terminó al iniciarlo
+
+    const validBreaks = breaks.filter(b => b[1] > b[0]);
+    const online = subtractIntervals(mergeIntervals(sessions.filter(s => s[1] > s[0])), validBreaks);
+    return { online, busy: blocks, breaks: mergeIntervals(validBreaks) };
+}
+
+function computeOccupancy(calls, statuses) {
+    const mk = () => Array.from({ length: 5 }, () => Array(24).fill(0));
+    const busy = mk(), online = mk(), wait = mk(), brk = mk();
+    const days = {};
+    const bucket = (d) => days[d] || (days[d] = { calls: [], logs: [] });
+    calls.forEach(r => { if (r._time) bucket(r.call_date).calls.push(r); });
+    statuses.forEach(l => bucket(l._date).logs.push(l));
+
+    const excluded = new Set();
+    const today = todayISO();
+    let workDays = 0;
+    Object.keys(days).forEach(date => {
+        if (nonWorkingReason(date)) { excluded.add(date); return; }
+        const wd = weekdayIndex(date); // 0 = lunes ... 4 = viernes
+        const d = days[date];
+        d.logs.sort((a, b) => (a._min - b._min) || ((Number(a.id) || 0) - (Number(b.id) || 0)));
+        const tl = buildDayTimeline(d.calls, d.logs, date === today ? nowMinutes() : null);
+        const o = Array(24).fill(0), b = Array(24).fill(0), k = Array(24).fill(0);
+        tl.online.forEach(([x, y]) => addToHours(o, x, y));
+        tl.busy.forEach(([x, y]) => addToHours(b, x, y));
+        tl.breaks.forEach(([x, y]) => addToHours(k, x, y));
+        for (let h = 0; h < 24; h++) {
+            online[wd][h] += o[h];
+            busy[wd][h] += b[h];
+            wait[wd][h] += Math.max(0, o[h] - b[h]);
+            brk[wd][h] += k[h];
+        }
+        workDays += 1;
+    });
+    return { busy, online, wait, brk, excludedDays: excluded.size, workDays };
 }
 
 function renderTimesheetChart(data) {
-    const { busy, online } = computeOccupancy(data);
+    const occ = computeOccupancy(data, statusLogs);
+    const note = exclusionNote(occ.excludedDays);
 
     if (cardMode.timesheet === 0) {
         const points = [];
         let peak = null;
         let maxBusy = 0;
-        for (let wd = 0; wd < 7; wd++) for (let h = 0; h < 24; h++) {
-            if (busy[wd][h] > 0) maxBusy = Math.max(maxBusy, busy[wd][h]);
-        }
-        for (let wd = 0; wd < 7; wd++) for (let h = 0; h < 24; h++) {
-            const b = busy[wd][h];
-            if (b <= 0) continue;
-            const o = online[wd][h];
-            const occ = o > 0 ? Math.min(1, b / o) : 0;
-            const pt = { x: h, y: WEEKDAYS[wd], busy: b, online: o, occ, r: 3 + 11 * (b / maxBusy) };
+        for (let wd = 0; wd < 5; wd++) for (let h = 0; h < 24; h++) maxBusy = Math.max(maxBusy, occ.busy[wd][h]);
+        for (let wd = 0; wd < 5; wd++) for (let h = 0; h < 24; h++) {
+            const b = occ.busy[wd][h];
+            const o = occ.online[wd][h];
+            if (b <= 0 && o <= 0) continue;
+            const share = o > 0 ? Math.min(1, b / o) : 0;
+            const pt = {
+                x: h, y: WEEKDAYS[wd], busy: b, online: o, wait: occ.wait[wd][h], occ: share,
+                r: b > 0 ? 3 + 11 * (b / maxBusy) : 2
+            };
             points.push(pt);
-            if (!peak || b > peak.busy) peak = pt;
+            if (b > 0 && (!peak || b > peak.busy)) peak = pt;
         }
         const hrs = points.map(p => p.x);
         const xmin = hrs.length ? Math.max(0, Math.min(...hrs) - 1) : 0;
@@ -1400,7 +1871,7 @@ function renderTimesheetChart(data) {
             type: 'bubble',
             data: { datasets: [{
                 label: 'Ocupación', data: points,
-                backgroundColor: points.map(p => `rgba(106,90,205,${(0.22 + 0.68 * p.occ).toFixed(2)})`),
+                backgroundColor: points.map(p => `rgba(106,90,205,${(0.18 + 0.72 * p.occ).toFixed(2)})`),
                 borderColor: '#6a5acd', borderWidth: 1
             }] },
             options: {
@@ -1411,7 +1882,8 @@ function renderTimesheetChart(data) {
                         title: (items) => items.length ? `${items[0].raw.y} · ${formatHourLabel(items[0].raw.x)}` : '',
                         label: (c) => [
                             `En llamada: ${c.raw.busy.toFixed(0)} min`,
-                            `En línea (inferido): ${c.raw.online.toFixed(0)} min`,
+                            `Espera: ${c.raw.wait.toFixed(0)} min`,
+                            `En línea: ${c.raw.online.toFixed(0)} min`,
                             `Ocupación: ${(c.raw.occ * 100).toFixed(0)}%`
                         ]
                     } }
@@ -1427,36 +1899,40 @@ function renderTimesheetChart(data) {
                 }
             }
         });
-        setCaption('timesheet', peak
-            ? `Franja pico: ${peak.y} ${formatHourLabel(peak.x)} · ${peak.busy.toFixed(0)} min en llamada · ${(peak.occ * 100).toFixed(0)}% de ocupación. Tiempo en línea inferido: de la primera a la última llamada de cada día.`
-            : '');
+        setCaption('timesheet', [
+            peak ? `Franja pico: ${peak.y} ${formatHourLabel(peak.x)} · ${peak.busy.toFixed(0)} min en llamada · ${(peak.occ * 100).toFixed(0)}% de ocupación.` : '',
+            'En línea = jornada menos breaks.',
+            note
+        ].filter(Boolean).join(' '));
         return;
     }
 
-    // Vista 2: en línea (inferido) vs en llamada, por hora
-    const busyH = Array(24).fill(0), onlineH = Array(24).fill(0);
-    for (let wd = 0; wd < 7; wd++) for (let h = 0; h < 24; h++) {
-        busyH[h] += busy[wd][h];
-        onlineH[h] += online[wd][h];
+    // Vista 2: por hora, en llamada + espera (= en línea) y % de ocupación
+    const busyH = Array(24).fill(0), onlineH = Array(24).fill(0), waitH = Array(24).fill(0), brkH = Array(24).fill(0);
+    for (let wd = 0; wd < 5; wd++) for (let h = 0; h < 24; h++) {
+        busyH[h] += occ.busy[wd][h];
+        onlineH[h] += occ.online[wd][h];
+        waitH[h] += occ.wait[wd][h];
+        brkH[h] += occ.brk[wd][h];
     }
-    const active = [];
-    for (let h = 0; h < 24; h++) if (busyH[h] > 0 || onlineH[h] > 0) active.push(h);
-    const from = active.length ? active[0] : 0;
-    const to = active.length ? active[active.length - 1] : 23;
     const hours = [];
-    for (let h = from; h <= to; h++) hours.push(h);
+    for (let h = 0; h < 24; h++) if (busyH[h] > 0 || onlineH[h] > 0) hours.push(h);
+    const first = hours.length ? hours[0] : 0;
+    const last = hours.length ? hours[hours.length - 1] : 23;
+    const range = [];
+    for (let h = first; h <= last; h++) range.push(h);
+    const occPct = range.map(h => onlineH[h] > 0 ? +Math.min(100, (busyH[h] / onlineH[h]) * 100).toFixed(0) : 0);
 
-    const occPct = hours.map(h => onlineH[h] > 0 ? +Math.min(100, (busyH[h] / onlineH[h]) * 100).toFixed(0) : 0);
     mkChart('timesheet', 'chartTimesheet', {
         type: 'bar',
-        data: { labels: hours.map(formatHourLabel), datasets: [
+        data: { labels: range.map(formatHourLabel), datasets: [
             {
-                type: 'bar', label: 'En línea (inferido)', data: hours.map(h => +onlineH[h].toFixed(1)),
-                backgroundColor: 'rgba(31,138,112,0.3)', borderColor: '#1f8a70', borderWidth: 1, borderRadius: 4, order: 2
+                type: 'bar', label: 'En llamada', data: range.map(h => +busyH[h].toFixed(1)),
+                backgroundColor: 'rgba(106,90,205,0.65)', borderColor: '#6a5acd', borderWidth: 1, borderRadius: 4, stack: 'min', order: 2
             },
             {
-                type: 'bar', label: 'En llamada', data: hours.map(h => +busyH[h].toFixed(1)),
-                backgroundColor: 'rgba(106,90,205,0.65)', borderColor: '#6a5acd', borderWidth: 1, borderRadius: 4, order: 2
+                type: 'bar', label: 'Espera', data: range.map(h => +waitH[h].toFixed(1)),
+                backgroundColor: 'rgba(31,138,112,0.35)', borderColor: '#1f8a70', borderWidth: 1, borderRadius: 4, stack: 'min', order: 2
             },
             {
                 type: 'line', label: '% ocupación', data: occPct, yAxisID: 'y1',
@@ -1472,18 +1948,23 @@ function renderTimesheetChart(data) {
                 tooltip: { callbacks: { label: (c) => c.dataset.yAxisID === 'y1' ? `${c.dataset.label}: ${c.raw}%` : `${c.dataset.label}: ${c.raw} min` } }
             },
             scales: {
-                y: { beginAtZero: true, title: { display: true, text: 'Minutos' }, grid: { color: GRID } },
+                y: { beginAtZero: true, stacked: true, title: { display: true, text: 'Minutos en línea' }, grid: { color: GRID } },
                 y1: { position: 'right', beginAtZero: true, max: 100, title: { display: true, text: '% ocupación' }, grid: { drawOnChartArea: false } },
-                x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } }
+                x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } }
             }
         }
     });
 
     let peakH = null;
-    hours.forEach(h => { if (peakH === null || busyH[h] > busyH[peakH]) peakH = h; });
-    setCaption('timesheet', peakH !== null && busyH[peakH] > 0
-        ? `Hora pico: ${formatHourLabel(peakH)} · ${busyH[peakH].toFixed(0)} min en llamada de ${onlineH[peakH].toFixed(0)} min en línea (${occPct[hours.indexOf(peakH)]}%). Tiempo en línea inferido: de la primera a la última llamada de cada día.`
-        : '');
+    range.forEach(h => { if (peakH === null || busyH[h] > busyH[peakH]) peakH = h; });
+    const totalBreak = brkH.reduce((a, b) => a + b, 0);
+    setCaption('timesheet', [
+        peakH !== null && busyH[peakH] > 0
+            ? `Hora pico: ${formatHourLabel(peakH)} · ${busyH[peakH].toFixed(0)} min en llamada, ${waitH[peakH].toFixed(0)} min de espera (${occPct[range.indexOf(peakH)]}% de ocupación).`
+            : '',
+        totalBreak > 0 ? `Breaks descontados: ${totalBreak.toFixed(0)} min.` : '',
+        note
+    ].filter(Boolean).join(' '));
 }
 
 // ---------- Tabla ----------
@@ -1500,11 +1981,14 @@ function renderTable(data) {
     const sorted = [...data].sort((a, b) => stamp(b).localeCompare(stamp(a)));
 
     sorted.forEach(row => {
-        const eff = effectiveType(row);
-        const isAuto = !row._type && !!eff;
+        const literal = effectiveType(row);
+        const shown = displayType(row);
+        const isAuto = !row._type && !!literal;
+        const changed = literal && canonType(literal) !== shown;
+        const titleAttr = changed ? ` title="Registrado como: ${esc(literal)}"` : '';
         const typeCell = isAuto
-            ? `<span class="type-auto">${esc(eff)}</span><span class="auto-badge">auto</span>`
-            : esc(eff || '—');
+            ? `<span class="type-auto"${titleAttr}>${esc(shown)}</span><span class="auto-badge">auto</span>`
+            : `<span${titleAttr}>${esc(shown || '—')}</span>`;
         const timeCell = row._time ? format12(row._time.hhmm) : esc(row.call_time || '—');
         const tr = document.createElement('tr');
         tr.innerHTML = `
